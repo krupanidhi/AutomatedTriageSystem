@@ -1,0 +1,375 @@
+@{
+    ViewData["Title"] = "Upload File";
+}
+
+<div class="upload-container">
+    <div class="page-header">
+        <h1><i class="fas fa-upload"></i> Upload Excel File</h1>
+        <p class="subtitle">Upload your Excel file for AI-powered analysis</p>
+    </div>
+
+    <div class="upload-section">
+        <div class="upload-card">
+            <div class="upload-icon">
+                <i class="fas fa-file-excel"></i>
+            </div>
+            <h3>Select Your Excel File</h3>
+            <p>Supported formats: .xlsx, .xls</p>
+            
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" name="file" accept=".xlsx,.xls" required>
+                    <label for="fileInput" class="file-input-label">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span>Choose File or Drag & Drop</span>
+                    </label>
+                </div>
+                
+                <div id="fileInfo" class="file-info" style="display: none;">
+                    <i class="fas fa-file"></i>
+                    <span id="fileName"></span>
+                    <span id="fileSize"></span>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-large" id="uploadBtn" disabled>
+                    <i class="fas fa-upload"></i> Upload File
+                </button>
+            </form>
+
+            <div id="uploadProgress" class="upload-progress" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p id="progressText">Uploading...</p>
+            </div>
+
+            <div id="uploadSuccess" class="upload-success" style="display: none;">
+                <i class="fas fa-check-circle"></i>
+                <h3>Upload Successful!</h3>
+                <p>Your file has been uploaded and is ready for analysis.</p>
+                <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+            </div>
+
+            <div id="uploadError" class="upload-error" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Upload Failed</h3>
+                <p id="errorMessage"></p>
+                <button onclick="resetUpload()" class="btn btn-secondary">Try Again</button>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <h3><i class="fas fa-info-circle"></i> File Requirements</h3>
+            <ul class="info-list">
+                <li><i class="fas fa-check"></i> Excel format (.xlsx or .xls)</li>
+                <li><i class="fas fa-check"></i> Maximum file size: 50 MB</li>
+                <li><i class="fas fa-check"></i> Should contain grantee data</li>
+                <li><i class="fas fa-check"></i> Include comment columns for analysis</li>
+            </ul>
+
+            <h3><i class="fas fa-lightbulb"></i> What Happens Next?</h3>
+            <ol class="info-list">
+                <li>File is uploaded and validated</li>
+                <li>Data is extracted and processed</li>
+                <li>You can run different types of analysis</li>
+                <li>View beautiful, interactive reports</li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadForm = document.getElementById('uploadForm');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const uploadProgress = document.getElementById('uploadProgress');
+        const uploadSuccess = document.getElementById('uploadSuccess');
+        const uploadError = document.getElementById('uploadError');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const errorMessage = document.getElementById('errorMessage');
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                fileSize.textContent = formatFileSize(file.size);
+                fileInfo.style.display = 'flex';
+                uploadBtn.disabled = false;
+            }
+        });
+
+        uploadForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            uploadProgress.style.display = 'block';
+            uploadBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/files/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                progressFill.style.width = '100%';
+
+                if (response.ok) {
+                    const result = await response.json();
+                    uploadProgress.style.display = 'none';
+                    uploadSuccess.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 2000);
+                } else {
+                    throw new Error('Upload failed');
+                }
+            } catch (error) {
+                uploadProgress.style.display = 'none';
+                uploadError.style.display = 'block';
+                errorMessage.textContent = error.message;
+            }
+        });
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function resetUpload() {
+            uploadError.style.display = 'none';
+            uploadProgress.style.display = 'none';
+            fileInfo.style.display = 'none';
+            uploadBtn.disabled = true;
+            fileInput.value = '';
+        }
+
+        // Drag and drop
+        const uploadCard = document.querySelector('.upload-card');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadCard.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadCard.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadCard.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            uploadCard.classList.add('drag-over');
+        }
+
+        function unhighlight(e) {
+            uploadCard.classList.remove('drag-over');
+        }
+
+        uploadCard.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                fileInput.files = files;
+                const event = new Event('change');
+                fileInput.dispatchEvent(event);
+            }
+        }
+    </script>
+}
+
+<style>
+    .upload-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .upload-section {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 30px;
+    }
+
+    .upload-card {
+        background: white;
+        padding: 40px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .upload-card.drag-over {
+        border: 2px dashed var(--primary-color);
+        background: rgba(102, 126, 234, 0.05);
+    }
+
+    .upload-icon {
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 20px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3em;
+        color: white;
+    }
+
+    .upload-card h3 {
+        margin-bottom: 10px;
+        color: var(--text-color);
+    }
+
+    .upload-card p {
+        color: var(--dark-gray);
+        margin-bottom: 30px;
+    }
+
+    .file-input-wrapper {
+        position: relative;
+        margin-bottom: 30px;
+    }
+
+    .file-input-wrapper input[type="file"] {
+        position: absolute;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+    }
+
+    .file-input-label {
+        display: block;
+        padding: 40px;
+        border: 2px dashed var(--medium-gray);
+        border-radius: 8px;
+        background: var(--light-gray);
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .file-input-label:hover {
+        border-color: var(--primary-color);
+        background: rgba(102, 126, 234, 0.05);
+    }
+
+    .file-input-label i {
+        font-size: 2em;
+        color: var(--primary-color);
+        display: block;
+        margin-bottom: 10px;
+    }
+
+    .file-info {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        padding: 15px;
+        background: var(--light-gray);
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .file-info i {
+        color: var(--primary-color);
+        font-size: 1.5em;
+    }
+
+    .btn-large {
+        padding: 15px 40px;
+        font-size: 1.1em;
+    }
+
+    .upload-progress {
+        margin-top: 30px;
+    }
+
+    .upload-success,
+    .upload-error {
+        margin-top: 30px;
+        padding: 30px;
+        border-radius: 8px;
+    }
+
+    .upload-success {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .upload-success i {
+        font-size: 3em;
+        margin-bottom: 15px;
+    }
+
+    .upload-error {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .upload-error i {
+        font-size: 3em;
+        margin-bottom: 15px;
+    }
+
+    .info-section {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .info-section h3 {
+        color: var(--primary-color);
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .info-list {
+        list-style: none;
+        margin-bottom: 30px;
+    }
+
+    .info-list li {
+        padding: 10px 0;
+        color: var(--dark-gray);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .info-list i {
+        color: var(--success-color);
+    }
+
+    @@media (max-width: 768px) {
+        .upload-section {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>

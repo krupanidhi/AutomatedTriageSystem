@@ -1,0 +1,529 @@
+@{
+    ViewData["Title"] = "AI Settings";
+}
+
+<div class="settings-container">
+    <div class="page-header">
+        <h1><i class="fas fa-cog"></i> AI Model Configuration</h1>
+        <p class="subtitle">Configure your AI provider and model settings</p>
+    </div>
+
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i>
+        <div>
+            <strong>Important:</strong> After saving settings, you must restart the application for changes to take effect.
+        </div>
+    </div>
+
+    <div id="successMessage" class="alert alert-success" style="display: none;">
+        <i class="fas fa-check-circle"></i>
+        <span id="successText"></span>
+    </div>
+
+    <div id="errorMessage" class="alert alert-danger" style="display: none;">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span id="errorText"></span>
+    </div>
+
+    <form id="settingsForm">
+        <!-- Provider Selection -->
+        <div class="settings-section">
+            <h2><i class="fas fa-server"></i> AI Provider</h2>
+            <div class="form-group">
+                <label for="provider">Select Provider</label>
+                <select id="provider" name="provider" class="form-control" required>
+                    <option value="Claude">Claude (Anthropic) - Recommended</option>
+                    <option value="Gemini">Gemini (Google) - Free Tier</option>
+                    <option value="OpenAI">OpenAI (GPT) - Popular</option>
+                    <option value="Ollama">Ollama - Local/Free</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="useFastSentiment" name="useFastSentiment" checked>
+                    Use Fast Sentiment (Keyword-based, free)
+                </label>
+                <small class="form-text">When enabled, uses keyword-based sentiment analysis instead of AI API calls</small>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="useDynamicKeywords" name="useDynamicKeywords" checked>
+                    Use Dynamic Keywords
+                </label>
+                <small class="form-text">Extract buzzwords from your Excel file instead of using hardcoded list</small>
+            </div>
+        </div>
+
+        <!-- Claude Settings -->
+        <div id="claudeSettings" class="settings-section provider-settings">
+            <h2><i class="fas fa-robot"></i> Claude Configuration</h2>
+            <div class="form-group">
+                <label for="claudeApiKey">API Key *</label>
+                <input type="password" id="claudeApiKey" class="form-control" placeholder="sk-ant-api03-...">
+                <small class="form-text">Get your key from <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></small>
+            </div>
+            <div class="form-group">
+                <label for="claudeModel">Model</label>
+                <select id="claudeModel" class="form-control">
+                    <option value="claude-opus-4-20250514">Claude Opus 4 (Most capable)</option>
+                    <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (Balanced)</option>
+                    <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Fast)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="claudeMaxTokens">Max Tokens Per Request</label>
+                <input type="number" id="claudeMaxTokens" class="form-control" value="1024" min="256" max="4096">
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="claudeBatching" checked>
+                    Enable Batching (Saves 80-90% on tokens)
+                </label>
+            </div>
+            <div class="form-group">
+                <label for="claudeBatchSize">Batch Size</label>
+                <input type="number" id="claudeBatchSize" class="form-control" value="10" min="1" max="20">
+            </div>
+        </div>
+
+        <!-- Gemini Settings -->
+        <div id="geminiSettings" class="settings-section provider-settings" style="display: none;">
+            <h2><i class="fas fa-brain"></i> Gemini Configuration</h2>
+            <div class="form-group">
+                <label for="geminiApiKey">API Key *</label>
+                <input type="password" id="geminiApiKey" class="form-control" placeholder="Your Gemini API key">
+                <small class="form-text">Get your key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></small>
+            </div>
+            <div class="form-group">
+                <label for="geminiModel">Model</label>
+                <select id="geminiModel" class="form-control">
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Most capable)</option>
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Faster)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="geminiDelay">Delay Between Calls (ms)</label>
+                <input type="number" id="geminiDelay" class="form-control" value="12000" min="0" step="1000">
+                <small class="form-text">12000ms = 12 seconds (for 2 requests/minute free tier)</small>
+            </div>
+        </div>
+
+        <!-- OpenAI Settings -->
+        <div id="openaiSettings" class="settings-section provider-settings" style="display: none;">
+            <h2><i class="fas fa-code"></i> OpenAI Configuration</h2>
+            <div class="form-group">
+                <label for="openaiApiKey">API Key *</label>
+                <input type="password" id="openaiApiKey" class="form-control" placeholder="sk-...">
+                <small class="form-text">Get your key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></small>
+            </div>
+            <div class="form-group">
+                <label for="openaiModel">Model</label>
+                <select id="openaiModel" class="form-control">
+                    <option value="gpt-4o">GPT-4o (Most capable)</option>
+                    <option value="gpt-4o-mini">GPT-4o Mini (Cost-effective)</option>
+                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Fast & cheap)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="openaiEndpoint">API Endpoint</label>
+                <input type="url" id="openaiEndpoint" class="form-control" value="https://api.openai.com/v1">
+            </div>
+        </div>
+
+        <!-- Ollama Settings -->
+        <div id="ollamaSettings" class="settings-section provider-settings" style="display: none;">
+            <h2><i class="fas fa-server"></i> Ollama Configuration</h2>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                Make sure Ollama is installed and running. Visit <a href="https://ollama.ai/" target="_blank">ollama.ai</a> to download.
+            </div>
+            <div class="form-group">
+                <label for="ollamaEndpoint">Endpoint</label>
+                <input type="url" id="ollamaEndpoint" class="form-control" value="http://localhost:11434">
+            </div>
+            <div class="form-group">
+                <label for="ollamaModel">Model</label>
+                <input type="text" id="ollamaModel" class="form-control" value="llama3.2" placeholder="llama3.2">
+                <small class="form-text">Pull models with: <code>ollama pull llama3.2</code></small>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="settings-actions">
+            <button type="button" id="testBtn" class="btn btn-secondary">
+                <i class="fas fa-vial"></i> Test Connection
+            </button>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Settings
+            </button>
+            <button type="button" id="resetBtn" class="btn btn-danger">
+                <i class="fas fa-undo"></i> Reset to Defaults
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        let currentSettings = null;
+
+        // Load settings on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadSettings();
+            setupEventListeners();
+        });
+
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/Settings');
+                if (!response.ok) throw new Error('Failed to load settings');
+                
+                currentSettings = await response.json();
+                populateForm(currentSettings);
+            } catch (error) {
+                showError('Failed to load settings: ' + error.message);
+            }
+        }
+
+        function populateForm(settings) {
+            document.getElementById('provider').value = settings.provider;
+            document.getElementById('useFastSentiment').checked = settings.useFastSentiment;
+            document.getElementById('useDynamicKeywords').checked = settings.useDynamicKeywords;
+
+            // Claude
+            document.getElementById('claudeApiKey').value = settings.claude.apiKey;
+            document.getElementById('claudeModel').value = settings.claude.model;
+            document.getElementById('claudeMaxTokens').value = settings.claude.maxTokensPerRequest;
+            document.getElementById('claudeBatching').checked = settings.claude.enableBatching;
+            document.getElementById('claudeBatchSize').value = settings.claude.batchSize;
+
+            // Gemini
+            document.getElementById('geminiApiKey').value = settings.gemini.apiKey;
+            document.getElementById('geminiModel').value = settings.gemini.model;
+            document.getElementById('geminiDelay').value = settings.gemini.delayBetweenCallsMs;
+
+            // OpenAI
+            document.getElementById('openaiApiKey').value = settings.openAI.apiKey;
+            document.getElementById('openaiModel').value = settings.openAI.model;
+            document.getElementById('openaiEndpoint').value = settings.openAI.endpoint;
+
+            // Ollama
+            document.getElementById('ollamaEndpoint').value = settings.ollama.endpoint;
+            document.getElementById('ollamaModel').value = settings.ollama.model;
+
+            showProviderSettings(settings.provider);
+        }
+
+        function setupEventListeners() {
+            document.getElementById('provider').addEventListener('change', (e) => {
+                showProviderSettings(e.target.value);
+            });
+
+            document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await saveSettings();
+            });
+
+            document.getElementById('testBtn').addEventListener('click', async () => {
+                await testConnection();
+            });
+
+            document.getElementById('resetBtn').addEventListener('click', async () => {
+                if (confirm('Are you sure you want to reset all settings to defaults?')) {
+                    await resetSettings();
+                }
+            });
+        }
+
+        function showProviderSettings(provider) {
+            document.querySelectorAll('.provider-settings').forEach(el => {
+                el.style.display = 'none';
+            });
+
+            const settingsMap = {
+                'Claude': 'claudeSettings',
+                'Gemini': 'geminiSettings',
+                'OpenAI': 'openaiSettings',
+                'Ollama': 'ollamaSettings'
+            };
+
+            const settingsId = settingsMap[provider];
+            if (settingsId) {
+                document.getElementById(settingsId).style.display = 'block';
+            }
+        }
+
+        function getFormData() {
+            return {
+                provider: document.getElementById('provider').value,
+                useFastSentiment: document.getElementById('useFastSentiment').checked,
+                useDynamicKeywords: document.getElementById('useDynamicKeywords').checked,
+                claude: {
+                    apiKey: document.getElementById('claudeApiKey').value,
+                    model: document.getElementById('claudeModel').value,
+                    delayBetweenCallsMs: 0,
+                    maxTokensPerRequest: parseInt(document.getElementById('claudeMaxTokens').value),
+                    enableBatching: document.getElementById('claudeBatching').checked,
+                    batchSize: parseInt(document.getElementById('claudeBatchSize').value)
+                },
+                gemini: {
+                    apiKey: document.getElementById('geminiApiKey').value,
+                    model: document.getElementById('geminiModel').value,
+                    delayBetweenCallsMs: parseInt(document.getElementById('geminiDelay').value)
+                },
+                openAI: {
+                    apiKey: document.getElementById('openaiApiKey').value,
+                    model: document.getElementById('openaiModel').value,
+                    endpoint: document.getElementById('openaiEndpoint').value
+                },
+                ollama: {
+                    endpoint: document.getElementById('ollamaEndpoint').value,
+                    model: document.getElementById('ollamaModel').value
+                }
+            };
+        }
+
+        async function saveSettings() {
+            try {
+                const settings = getFormData();
+                
+                const response = await fetch('/api/Settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error);
+                }
+
+                const result = await response.json();
+                showSuccess(result.message);
+                
+                if (result.requiresRestart) {
+                    setTimeout(() => {
+                        alert('Settings saved! Please restart the application:\n\n1. Stop the app (Ctrl+C)\n2. Run: dotnet run --urls "http://localhost:5200"');
+                    }, 1000);
+                }
+            } catch (error) {
+                showError('Failed to save settings: ' + error.message);
+            }
+        }
+
+        async function testConnection() {
+            try {
+                const settings = getFormData();
+                
+                const response = await fetch('/api/Settings/test-connection', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess(result.message);
+                } else {
+                    showError(result.message);
+                }
+            } catch (error) {
+                showError('Test failed: ' + error.message);
+            }
+        }
+
+        async function resetSettings() {
+            try {
+                const response = await fetch('/api/Settings/reset', {
+                    method: 'POST'
+                });
+
+                if (!response.ok) throw new Error('Failed to reset settings');
+                
+                const result = await response.json();
+                showSuccess(result.message);
+                
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } catch (error) {
+                showError('Failed to reset settings: ' + error.message);
+            }
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            document.getElementById('successText').textContent = message;
+            successDiv.style.display = 'flex';
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            document.getElementById('errorText').textContent = message;
+            errorDiv.style.display = 'flex';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+    </script>
+}
+
+<style>
+    .settings-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .alert {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .alert-info {
+        background: #d1ecf1;
+        border: 1px solid #bee5eb;
+        color: #0c5460;
+    }
+
+    .alert-success {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+
+    .alert-danger {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+
+    .alert i {
+        font-size: 1.5em;
+    }
+
+    .settings-section {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+
+    .settings-section h2 {
+        color: var(--primary-color);
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--text-color);
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px 15px;
+        border: 1px solid var(--medium-gray);
+        border-radius: 6px;
+        font-size: 1em;
+        transition: border-color 0.3s;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-text {
+        display: block;
+        margin-top: 5px;
+        font-size: 0.9em;
+        color: var(--dark-gray);
+    }
+
+    .form-text a {
+        color: var(--primary-color);
+        text-decoration: none;
+    }
+
+    .form-text code {
+        background: var(--light-gray);
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: 'Courier New', monospace;
+    }
+
+    .form-group input[type="checkbox"] {
+        width: auto;
+        margin-right: 8px;
+    }
+
+    .settings-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: flex-end;
+        padding-top: 20px;
+    }
+
+    .btn {
+        padding: 12px 30px;
+        border: none;
+        border-radius: 6px;
+        font-size: 1em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-primary {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: var(--secondary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-secondary {
+        background: var(--medium-gray);
+        color: var(--text-color);
+    }
+
+    .btn-secondary:hover {
+        background: var(--dark-gray);
+        color: white;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+    }
+</style>

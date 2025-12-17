@@ -1,0 +1,588 @@
+@{
+    ViewData["Title"] = "Settings";
+}
+
+<div class="settings-container">
+    <div class="page-header">
+        <h1><i class="fas fa-cog"></i> AI Model Configuration</h1>
+        <p class="subtitle">Configure your AI provider and model settings</p>
+    </div>
+
+    <div class="settings-content">
+        <div class="info-banner">
+            <i class="fas fa-info-circle"></i>
+            <div>
+                <h3>How to Configure AI Models</h3>
+                <p>AI model configuration is done through the <code>appsettings.json</code> file. After making changes, restart the application for them to take effect.</p>
+            </div>
+        </div>
+
+        <div class="model-cards">
+            <div class="model-card">
+                <div class="model-header">
+                    <i class="fas fa-robot"></i>
+                    <h3>Claude (Anthropic)</h3>
+                    <span class="badge badge-primary">Recommended</span>
+                </div>
+                <p class="model-description">Advanced AI model with excellent sentiment analysis and nuanced understanding</p>
+                
+                <div class="config-section">
+                    <h4>Configuration Steps:</h4>
+                    <ol class="config-steps">
+                        <li>Get API key from <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></li>
+                        <li>Open <code>appsettings.json</code> in your project</li>
+                        <li>Set the AI provider and configure Claude settings</li>
+                    </ol>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span>appsettings.json</span>
+                        <button onclick="copyCode('claude-config')" class="copy-btn">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    <pre id="claude-config"><code>{
+  "AI": {
+    "Provider": "Claude",
+    "UseFastSentiment": true,
+    "UseDynamicKeywords": true,
+    "Claude": {
+      "ApiKey": "sk-ant-api03-YOUR_API_KEY_HERE",
+      "Model": "claude-opus-4-20250514",
+      "DelayBetweenCallsMs": 0,
+      "MaxTokensPerRequest": 1024,
+      "EnableBatching": true,
+      "BatchSize": 10
+    }
+  }
+}</code></pre>
+                </div>
+
+                <div class="model-info">
+                    <div class="info-item">
+                        <strong>Available Models:</strong>
+                        <ul>
+                            <li><code>claude-opus-4-20250514</code> - Most capable</li>
+                            <li><code>claude-sonnet-4-20250514</code> - Balanced</li>
+                            <li><code>claude-3-5-sonnet-20241022</code> - Fast</li>
+                        </ul>
+                    </div>
+                    <div class="info-item">
+                        <strong>Rate Limits:</strong> 5 requests/minute (free tier)
+                    </div>
+                    <div class="info-item">
+                        <strong>Pricing:</strong> ~$0.003 per 1K tokens
+                    </div>
+                </div>
+            </div>
+
+            <div class="model-card">
+                <div class="model-header">
+                    <i class="fas fa-brain"></i>
+                    <h3>Gemini (Google)</h3>
+                    <span class="badge badge-success">Free Tier</span>
+                </div>
+                <p class="model-description">Google's AI model with generous free tier and good performance</p>
+                
+                <div class="config-section">
+                    <h4>Configuration Steps:</h4>
+                    <ol class="config-steps">
+                        <li>Get API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
+                        <li>Open <code>appsettings.json</code></li>
+                        <li>Configure Gemini settings</li>
+                    </ol>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span>appsettings.json</span>
+                        <button onclick="copyCode('gemini-config')" class="copy-btn">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    <pre id="gemini-config"><code>{
+  "AI": {
+    "Provider": "Gemini",
+    "UseFastSentiment": true,
+    "UseDynamicKeywords": true,
+    "Gemini": {
+      "ApiKey": "YOUR_GEMINI_API_KEY_HERE",
+      "Model": "gemini-1.5-pro",
+      "DelayBetweenCallsMs": 12000
+    }
+  }
+}</code></pre>
+                </div>
+
+                <div class="model-info">
+                    <div class="info-item">
+                        <strong>Available Models:</strong>
+                        <ul>
+                            <li><code>gemini-1.5-pro</code> - Most capable</li>
+                            <li><code>gemini-1.5-flash</code> - Faster</li>
+                        </ul>
+                    </div>
+                    <div class="info-item">
+                        <strong>Rate Limits:</strong> 2 requests/minute (free tier)
+                    </div>
+                    <div class="info-item">
+                        <strong>Pricing:</strong> Free tier available, then pay-as-you-go
+                    </div>
+                </div>
+            </div>
+
+            <div class="model-card">
+                <div class="model-header">
+                    <i class="fas fa-code"></i>
+                    <h3>OpenAI (GPT)</h3>
+                    <span class="badge badge-info">Popular</span>
+                </div>
+                <p class="model-description">Industry-standard AI models with excellent performance</p>
+                
+                <div class="config-section">
+                    <h4>Configuration Steps:</h4>
+                    <ol class="config-steps">
+                        <li>Get API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></li>
+                        <li>Open <code>appsettings.json</code></li>
+                        <li>Configure OpenAI settings</li>
+                    </ol>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span>appsettings.json</span>
+                        <button onclick="copyCode('openai-config')" class="copy-btn">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    <pre id="openai-config"><code>{
+  "AI": {
+    "Provider": "OpenAI",
+    "UseFastSentiment": true,
+    "UseDynamicKeywords": true,
+    "OpenAI": {
+      "ApiKey": "sk-YOUR_OPENAI_API_KEY_HERE",
+      "Model": "gpt-4o-mini",
+      "Endpoint": "https://api.openai.com/v1"
+    }
+  }
+}</code></pre>
+                </div>
+
+                <div class="model-info">
+                    <div class="info-item">
+                        <strong>Available Models:</strong>
+                        <ul>
+                            <li><code>gpt-4o</code> - Most capable</li>
+                            <li><code>gpt-4o-mini</code> - Cost-effective</li>
+                            <li><code>gpt-3.5-turbo</code> - Fast & cheap</li>
+                        </ul>
+                    </div>
+                    <div class="info-item">
+                        <strong>Rate Limits:</strong> Varies by tier
+                    </div>
+                    <div class="info-item">
+                        <strong>Pricing:</strong> ~$0.15-$5 per 1M tokens (model dependent)
+                    </div>
+                </div>
+            </div>
+
+            <div class="model-card">
+                <div class="model-header">
+                    <i class="fas fa-server"></i>
+                    <h3>Ollama (Local)</h3>
+                    <span class="badge badge-warning">Self-Hosted</span>
+                </div>
+                <p class="model-description">Run AI models locally on your own hardware - completely free and private</p>
+                
+                <div class="config-section">
+                    <h4>Configuration Steps:</h4>
+                    <ol class="config-steps">
+                        <li>Install <a href="https://ollama.ai/" target="_blank">Ollama</a> on your machine</li>
+                        <li>Pull a model: <code>ollama pull llama3.2</code></li>
+                        <li>Start Ollama service</li>
+                        <li>Configure in <code>appsettings.json</code></li>
+                    </ol>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span>appsettings.json</span>
+                        <button onclick="copyCode('ollama-config')" class="copy-btn">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    <pre id="ollama-config"><code>{
+  "AI": {
+    "Provider": "Ollama",
+    "Ollama": {
+      "Endpoint": "http://localhost:11434",
+      "Model": "llama3.2"
+    }
+  }
+}</code></pre>
+                </div>
+
+                <div class="model-info">
+                    <div class="info-item">
+                        <strong>Available Models:</strong>
+                        <ul>
+                            <li><code>llama3.2</code> - Latest Llama</li>
+                            <li><code>mistral</code> - Fast & capable</li>
+                            <li><code>phi3</code> - Lightweight</li>
+                        </ul>
+                    </div>
+                    <div class="info-item">
+                        <strong>Rate Limits:</strong> None (local)
+                    </div>
+                    <div class="info-item">
+                        <strong>Pricing:</strong> Free (requires local hardware)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="advanced-settings">
+            <h2><i class="fas fa-sliders-h"></i> Advanced Settings</h2>
+            
+            <div class="setting-card">
+                <h3>UseFastSentiment</h3>
+                <p>When <code>true</code>, uses keyword-based sentiment analysis (fast, free). When <code>false</code>, uses AI API for sentiment (slower, costs tokens).</p>
+                <code>"UseFastSentiment": true</code>
+                <span class="badge badge-success">Recommended: true</span>
+            </div>
+
+            <div class="setting-card">
+                <h3>UseDynamicKeywords</h3>
+                <p>When <code>true</code>, extracts buzzwords from your Excel file. When <code>false</code>, uses hardcoded keyword list.</p>
+                <code>"UseDynamicKeywords": true</code>
+                <span class="badge badge-success">Recommended: true</span>
+            </div>
+
+            <div class="setting-card">
+                <h3>DelayBetweenCallsMs</h3>
+                <p>Milliseconds to wait between API calls to respect rate limits.</p>
+                <ul>
+                    <li>Claude: <code>0</code> (batching handles rate limits)</li>
+                    <li>Gemini: <code>12000</code> (2 requests/minute = 30s delay, use 12s for safety)</li>
+                    <li>OpenAI: <code>0</code> (generous rate limits)</li>
+                </ul>
+            </div>
+
+            <div class="setting-card">
+                <h3>Batching (Claude only)</h3>
+                <p>Process multiple comments in one API call to save tokens and time.</p>
+                <code>"EnableBatching": true, "BatchSize": 10</code>
+                <span class="badge badge-success">Recommended: Enabled</span>
+            </div>
+        </div>
+
+        <div class="restart-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+                <h3>Important: Restart Required</h3>
+                <p>After modifying <code>appsettings.json</code>, you must restart the application for changes to take effect.</p>
+                <code>Ctrl+C</code> to stop, then <code>dotnet run --urls "http://localhost:5200"</code> to restart
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function copyCode(elementId) {
+            const codeElement = document.getElementById(elementId);
+            const text = codeElement.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target.closest('.copy-btn');
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                btn.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.style.background = '';
+                }, 2000);
+            });
+        }
+    </script>
+}
+
+<style>
+    .settings-container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .settings-content {
+        display: grid;
+        gap: 30px;
+    }
+
+    .info-banner {
+        background: linear-gradient(135deg, #667eea15, #764ba215);
+        border-left: 5px solid var(--primary-color);
+        padding: 25px;
+        border-radius: 12px;
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+
+    .info-banner i {
+        font-size: 2em;
+        color: var(--primary-color);
+    }
+
+    .info-banner h3 {
+        margin-bottom: 10px;
+        color: var(--text-color);
+    }
+
+    .info-banner code {
+        background: rgba(0,0,0,0.1);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+    }
+
+    .model-cards {
+        display: grid;
+        gap: 30px;
+    }
+
+    .model-card {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .model-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .model-header i {
+        font-size: 2em;
+        color: var(--primary-color);
+    }
+
+    .model-header h3 {
+        flex: 1;
+        margin: 0;
+        color: var(--text-color);
+    }
+
+    .model-description {
+        color: var(--dark-gray);
+        margin-bottom: 25px;
+    }
+
+    .config-section h4 {
+        color: var(--primary-color);
+        margin-bottom: 15px;
+    }
+
+    .config-steps {
+        margin-left: 20px;
+        margin-bottom: 25px;
+    }
+
+    .config-steps li {
+        margin-bottom: 10px;
+        color: var(--dark-gray);
+    }
+
+    .config-steps a {
+        color: var(--primary-color);
+        text-decoration: none;
+    }
+
+    .config-steps a:hover {
+        text-decoration: underline;
+    }
+
+    .config-steps code {
+        background: var(--light-gray);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+    }
+
+    .code-block {
+        background: #1e1e1e;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 25px;
+    }
+
+    .code-header {
+        background: #2d2d2d;
+        padding: 10px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: #ccc;
+        font-size: 0.9em;
+    }
+
+    .copy-btn {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 5px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9em;
+        transition: background 0.3s;
+    }
+
+    .copy-btn:hover {
+        background: var(--secondary-color);
+    }
+
+    .code-block pre {
+        margin: 0;
+        padding: 20px;
+        overflow-x: auto;
+    }
+
+    .code-block code {
+        color: #d4d4d4;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+        line-height: 1.6;
+    }
+
+    .model-info {
+        background: var(--light-gray);
+        padding: 20px;
+        border-radius: 8px;
+    }
+
+    .info-item {
+        margin-bottom: 15px;
+    }
+
+    .info-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .info-item strong {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--text-color);
+    }
+
+    .info-item ul {
+        list-style: none;
+        margin-left: 0;
+    }
+
+    .info-item li {
+        padding: 5px 0;
+        color: var(--dark-gray);
+    }
+
+    .info-item code {
+        background: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+    }
+
+    .advanced-settings {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .advanced-settings h2 {
+        color: var(--primary-color);
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .setting-card {
+        background: var(--light-gray);
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .setting-card h3 {
+        color: var(--text-color);
+        margin-bottom: 10px;
+    }
+
+    .setting-card p {
+        color: var(--dark-gray);
+        margin-bottom: 10px;
+    }
+
+    .setting-card code {
+        background: white;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        display: inline-block;
+        margin: 10px 0;
+    }
+
+    .setting-card ul {
+        margin-left: 20px;
+        margin-top: 10px;
+    }
+
+    .setting-card li {
+        margin-bottom: 5px;
+        color: var(--dark-gray);
+    }
+
+    .restart-warning {
+        background: #fff3cd;
+        border-left: 5px solid #ffc107;
+        padding: 25px;
+        border-radius: 12px;
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+
+    .restart-warning i {
+        font-size: 2em;
+        color: #856404;
+    }
+
+    .restart-warning h3 {
+        margin-bottom: 10px;
+        color: #856404;
+    }
+
+    .restart-warning p {
+        color: #856404;
+        margin-bottom: 10px;
+    }
+
+    .restart-warning code {
+        background: rgba(0,0,0,0.1);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+    }
+
+    .badge-primary {
+        background: var(--primary-color);
+        color: white;
+    }
+</style>

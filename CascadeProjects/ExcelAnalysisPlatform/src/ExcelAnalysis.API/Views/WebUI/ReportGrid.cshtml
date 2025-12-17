@@ -1,0 +1,1257 @@
+@{
+    ViewData["Title"] = "Analysis Report Grid";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/css/site.css">
+    <style>
+        .grid-container {
+            padding: 20px;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+
+        .filters-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-item label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .filter-item input,
+        .filter-item select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+
+        .btn-export {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-export:hover {
+            background: #218838;
+        }
+
+        .data-grid {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .grid-header {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .grid-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .grid-stats {
+            font-size: 14px;
+            color: #666;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f8f9fa;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #dee2e6;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        th:hover {
+            background: #e9ecef;
+        }
+
+        th.sortable::after {
+            content: ' ⇅';
+            color: #999;
+        }
+
+        th.sort-asc::after {
+            content: ' ↑';
+            color: #007bff;
+        }
+
+        th.sort-desc::after {
+            content: ' ↓';
+            color: #007bff;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+            color: #333;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .risk-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .risk-high {
+            background: #dc3545;
+            color: white;
+        }
+
+        .risk-medium {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .risk-low {
+            background: #28a745;
+            color: white;
+        }
+
+        .risk-unknown {
+            background: #6c757d;
+            color: white;
+        }
+
+        .sentiment-bar {
+            width: 100px;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .sentiment-fill {
+            height: 100%;
+            transition: width 0.3s;
+        }
+
+        .sentiment-positive {
+            background: linear-gradient(90deg, #28a745, #20c997);
+        }
+
+        .sentiment-negative {
+            background: linear-gradient(90deg, #dc3545, #c82333);
+        }
+
+        .sentiment-neutral {
+            background: linear-gradient(90deg, #ffc107, #fd7e14);
+        }
+
+        .challenges-list {
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .view-details-btn {
+            padding: 6px 12px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .view-details-btn:hover {
+            background: #0056b3;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .pagination button {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: #f8f9fa;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination .page-info {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex !important;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 30px;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .detail-section {
+            margin-bottom: 20px;
+        }
+
+        .detail-section h3 {
+            color: #333;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+
+        .detail-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .detail-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .challenge-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .challenge-card h4 {
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+
+        .action-steps {
+            list-style: decimal;
+            padding-left: 20px;
+            margin-top: 10px;
+        }
+
+        .action-steps li {
+            padding: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-container">
+        <div class="filters-panel">
+            <h2>🔍 Filter & Search</h2>
+            <div class="filter-group">
+                <div class="filter-item">
+                    <label for="fileSelect">File:</label>
+                    <select id="fileSelect">
+                        <option value="">All Files</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="providerFilter">Provider:</label>
+                    <select id="providerFilter">
+                        <option value="">All Providers</option>
+                        <option value="claude">Claude AI</option>
+                        <option value="semantic">Semantic</option>
+                        <option value="hybrid">Hybrid</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="riskFilter">Risk Level:</label>
+                    <select id="riskFilter">
+                        <option value="">All Risks</option>
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                        <option value="Unknown">Unknown</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="sentimentMin">Min Sentiment:</label>
+                    <input type="number" id="sentimentMin" min="-1" max="1" step="0.1" placeholder="-1.0">
+                </div>
+                <div class="filter-item">
+                    <label for="sentimentMax">Max Sentiment:</label>
+                    <input type="number" id="sentimentMax" min="-1" max="1" step="0.1" placeholder="1.0">
+                </div>
+                <div class="filter-item">
+                    <label for="orgSearch">Organization:</label>
+                    <input type="text" id="orgSearch" placeholder="Search organization...">
+                </div>
+                <div class="filter-item">
+                    <label for="challengeSearch">Challenge Keywords:</label>
+                    <input type="text" id="challengeSearch" placeholder="Search challenges...">
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
+                <button class="btn btn-secondary" onclick="clearFilters()">Clear All</button>
+                <button class="btn btn-export" onclick="exportToCSV()">📥 Export CSV</button>
+            </div>
+        </div>
+
+        <div class="data-grid">
+            <div class="grid-header">
+                <div class="grid-title">📊 Analysis Results</div>
+                <div class="grid-stats" id="gridStats">Loading...</div>
+            </div>
+            <div style="overflow-x: auto;">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-column="organization">Organization</th>
+                            <th class="sortable" data-column="sentiment">Sentiment</th>
+                            <th class="sortable" data-column="risk">Risk Level</th>
+                            <th class="sortable" data-column="comments">Comments</th>
+                            <th class="sortable" data-column="challenges">Challenge Count</th>
+                            <th>Top Challenges</th>
+                            <th>Provider</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="8" class="loading">Loading data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination">
+                <button onclick="previousPage()" id="prevBtn">← Previous</button>
+                <span class="page-info" id="pageInfo">Page 1 of 1</span>
+                <button onclick="nextPage()" id="nextBtn">Next →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div class="modal" id="detailsModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <div id="modalBody">
+                <!-- Details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        const rowsPerPage = 20;
+        let sortColumn = null;
+        let sortDirection = 'asc';
+
+        // Load data on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadFiles();
+            await loadData();
+            
+            // Attach event handlers after DOM is loaded
+            document.getElementById('fileSelect').addEventListener('change', loadData);
+            
+            // Attach button event listeners as backup to onclick
+            const applyBtn = document.querySelector('button.btn-primary');
+            const clearBtn = document.querySelector('button.btn-secondary');
+            const exportBtn = document.querySelector('button.btn-export');
+            
+            if (applyBtn) {
+                applyBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Apply Filters button clicked via event listener');
+                    applyFilters();
+                });
+            }
+            
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Clear Filters button clicked via event listener');
+                    clearFilters();
+                });
+            }
+            
+            if (exportBtn) {
+                exportBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Export CSV button clicked via event listener');
+                    exportToCSV();
+                });
+            }
+            
+            console.log('Event listeners attached successfully');
+            console.log('Functions available:', {
+                applyFilters: typeof applyFilters,
+                clearFilters: typeof clearFilters,
+                exportToCSV: typeof exportToCSV,
+                viewDetails: typeof viewDetails
+            });
+        });
+
+        async function loadFiles() {
+            try {
+                const response = await fetch('/api/Files');
+                const files = await response.json();
+                
+                const fileSelect = document.getElementById('fileSelect');
+                
+                // Create options for each file's analysis results
+                files.forEach(file => {
+                    if (file.analysisResults && file.analysisResults.length > 0) {
+                        // Create an option for each analysis result
+                        file.analysisResults.forEach(result => {
+                            const option = document.createElement('option');
+                            option.value = file.id;
+                            option.dataset.analysisId = result.id;
+                            option.dataset.analysisType = result.analysisType;
+                            
+                            const analysisType = result.analysisType || 'Unknown';
+                            // Convert UTC timestamp to local time
+                            const date = new Date(result.analyzedAt + 'Z').toLocaleString();
+                            const displayText = `${file.fileName} [${analysisType} - ${date}]`;
+                            
+                            option.textContent = displayText;
+                            fileSelect.appendChild(option);
+                        });
+                    } else {
+                        // File with no analysis results
+                        const option = document.createElement('option');
+                        option.value = file.id;
+                        option.textContent = `${file.fileName} [No analysis]`;
+                        fileSelect.appendChild(option);
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading files:', error);
+            }
+        }
+
+        async function loadData() {
+            try {
+                const fileId = document.getElementById('fileSelect').value;
+                
+                if (!fileId) {
+                    // Load all analysis results
+                    const response = await fetch('/api/Files');
+                    const files = await response.json();
+                    
+                    allData = [];
+                    for (const file of files) {
+                        if (file.analysisResults && file.analysisResults.length > 0) {
+                            const result = file.analysisResults[0];
+                            const parsed = JSON.parse(result.rawResultJson || '{}');
+                            
+                            if (parsed.LowestSentimentOrganizations) {
+                                parsed.LowestSentimentOrganizations.forEach(org => {
+                                    allData.push({
+                                        ...org,
+                                        fileName: file.fileName,
+                                        fileId: file.id,
+                                        analysisType: result.analysisType
+                                    });
+                                });
+                            }
+                        }
+                    }
+                } else {
+                    // Load specific file analysis - try hybrid first, fall back to AI-enhanced
+                    let response = await fetch(`/api/Reports/${fileId}/download-hybrid-json`);
+                    let result;
+                    let analysisType = 'hybrid';
+                    
+                    if (!response.ok) {
+                        console.log('No hybrid analysis found, trying AI-enhanced...');
+                        response = await fetch(`/api/Reports/${fileId}/download-ai-json`);
+                        analysisType = 'ai-enhanced';
+                    }
+                    
+                    if (!response.ok) {
+                        console.error(`API error: ${response.status} ${response.statusText}`);
+                        const errorText = await response.text();
+                        console.error('Error details:', errorText);
+                        throw new Error(`Failed to load analysis: ${response.status} - ${errorText}`);
+                    }
+                    
+                    result = await response.json();
+                    console.log('Loaded analysis type:', analysisType);
+                    console.log('Analysis data:', result);
+                    
+                    allData = [];
+                    
+                    // Handle hybrid analysis data
+                    if (analysisType === 'hybrid' && result.IntegratedOrganizationInsights) {
+                        result.IntegratedOrganizationInsights.forEach(org => {
+                            console.log('Hybrid org data:', org);
+                            allData.push({
+                                ...org,
+                                OrganizationName: org.OrganizationName || org.ClaudeOrganizationName || 'Organization',
+                                fileName: result.FileName || 'Unknown',
+                                fileId: fileId,
+                                analysisType: 'hybrid'
+                            });
+                        });
+                    }
+                    // Handle AI-enhanced analysis data
+                    else if (result.LowestSentimentOrganizations) {
+                        result.LowestSentimentOrganizations.forEach(org => {
+                            allData.push({
+                                ...org,
+                                fileName: result.FileName,
+                                fileId: fileId,
+                                analysisType: 'ai-enhanced'
+                            });
+                        });
+                    }
+                }
+                
+                filteredData = [...allData];
+                applyFilters();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('tableBody').innerHTML = 
+                    '<tr><td colspan="8" class="no-data">Error loading data. Please try again.</td></tr>';
+            }
+        }
+
+        // Make functions globally accessible
+        window.applyFilters = function() {
+            console.log('Applying filters...');
+            const providerFilter = document.getElementById('providerFilter').value;
+            const riskFilter = document.getElementById('riskFilter').value;
+            const sentimentMin = parseFloat(document.getElementById('sentimentMin').value) || -1;
+            const sentimentMax = parseFloat(document.getElementById('sentimentMax').value) || 1;
+            const orgSearch = document.getElementById('orgSearch').value.toLowerCase();
+            const challengeSearch = document.getElementById('challengeSearch').value.toLowerCase();
+            
+            console.log('Filters:', { providerFilter, riskFilter, sentimentMin, sentimentMax, orgSearch, challengeSearch });
+            
+            filteredData = allData.filter(org => {
+                // Provider filter
+                if (providerFilter) {
+                    const hasClaude = org.ClaudeSentiment !== undefined && org.ClaudeSentiment !== null;
+                    const hasSemantic = org.SemanticCoherence !== undefined && org.SemanticCoherence !== null;
+                    
+                    console.log('Checking org:', org.OrganizationName, 'hasClaude:', hasClaude, 'hasSemantic:', hasSemantic);
+                    
+                    if (providerFilter === 'hybrid') {
+                        // Only show if has BOTH Claude and Semantic
+                        if (!(hasClaude && hasSemantic)) return false;
+                    } else if (providerFilter === 'claude') {
+                        // Show if has Claude data (including hybrid)
+                        // For legacy data (no hybrid fields), assume it's Claude
+                        if (hasClaude || (!hasClaude && !hasSemantic)) {
+                            // Keep it
+                        } else {
+                            return false;
+                        }
+                    } else if (providerFilter === 'semantic') {
+                        // Only show if has Semantic data
+                        if (!hasSemantic) return false;
+                    }
+                }
+                
+                if (riskFilter && org.RiskLevel !== riskFilter) return false;
+                if (org.AverageSentiment < sentimentMin || org.AverageSentiment > sentimentMax) return false;
+                if (orgSearch && !org.OrganizationName.toLowerCase().includes(orgSearch)) return false;
+                if (challengeSearch) {
+                    const challenges = org.TopChallenges?.join(' ').toLowerCase() || '';
+                    if (!challenges.includes(challengeSearch)) return false;
+                }
+                return true;
+            });
+            
+            console.log(`Filtered ${filteredData.length} of ${allData.length} organizations`);
+            currentPage = 1;
+            renderTable();
+        };
+
+        window.clearFilters = function() {
+            document.getElementById('providerFilter').value = '';
+            document.getElementById('riskFilter').value = '';
+            document.getElementById('sentimentMin').value = '';
+            document.getElementById('sentimentMax').value = '';
+            document.getElementById('orgSearch').value = '';
+            document.getElementById('challengeSearch').value = '';
+            applyFilters();
+        };
+
+        function renderTable() {
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageData = filteredData.slice(start, end);
+            
+            const tbody = document.getElementById('tableBody');
+            
+            if (pageData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="no-data">No data matches your filters</td></tr>';
+                updateStats();
+                return;
+            }
+            
+            tbody.innerHTML = pageData.map((org, index) => {
+                // Handle both AI-enhanced and hybrid data structures
+                const sentiment = org.AverageSentiment ?? org.ClaudeSentiment ?? 0;
+                const riskLevel = org.RiskLevel ?? org.ClaudeRiskLevel ?? 'Unknown';
+                const totalComments = org.TotalComments ?? 0;
+                const challengeCount = org.ChallengeCount ?? (org.ClaudeDetailedChallenges?.length || 0);
+                const topChallenges = org.TopChallenges ?? (org.ClaudeDetailedChallenges?.map(c => c.Challenge).slice(0, 3) || []);
+                
+                return `
+                <tr>
+                    <td><strong>${org.OrganizationName}</strong></td>
+                    <td>
+                        <div class="sentiment-bar">
+                            <div class="sentiment-fill ${getSentimentClass(sentiment)}" 
+                                 style="width: ${getSentimentWidth(sentiment)}%">
+                            </div>
+                        </div>
+                        <small>${sentiment.toFixed(2)}</small>
+                    </td>
+                    <td>
+                        <span class="risk-badge risk-${riskLevel.toLowerCase()}">
+                            ${riskLevel}
+                        </span>
+                    </td>
+                    <td>${totalComments}</td>
+                    <td>${challengeCount}</td>
+                    <td class="challenges-list">
+                        ${topChallenges.join(', ') || 'None'}
+                    </td>
+                    <td>
+                        ${getProviderBadge(org)}
+                    </td>
+                    <td>
+                        <button class="view-details-btn" onclick="viewDetails(${start + index})">
+                            View Details
+                        </button>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+            
+            updatePagination();
+            updateStats();
+        }
+
+        function getSentimentClass(sentiment) {
+            if (sentiment >= 0.05) return 'sentiment-positive';
+            if (sentiment <= -0.05) return 'sentiment-negative';
+            return 'sentiment-neutral';
+        }
+
+        function getSentimentWidth(sentiment) {
+            return ((sentiment + 1) / 2) * 100;
+        }
+
+        function getProviderBadge(org) {
+            // Check if this is hybrid analysis data
+            if (org.ClaudeSentiment !== undefined || org.SemanticCoherence !== undefined) {
+                const hasClaude = org.ClaudeSentiment !== undefined && org.ClaudeSentiment !== null;
+                const hasSemantic = org.SemanticCoherence !== undefined && org.SemanticCoherence !== null;
+                
+                if (hasClaude && hasSemantic) {
+                    return '<span onclick="filterByProvider(\'hybrid\')" style="background:#6f42c1;color:white;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer;" title="Click to filter by Hybrid">🔀 HYBRID</span>';
+                } else if (hasClaude) {
+                    return '<span onclick="filterByProvider(\'claude\')" style="background:#007bff;color:white;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer;" title="Click to filter by Claude AI">🤖 Claude</span>';
+                } else if (hasSemantic) {
+                    return '<span onclick="filterByProvider(\'semantic\')" style="background:#28a745;color:white;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer;" title="Click to filter by Semantic">🧠 Semantic</span>';
+                }
+            }
+            // Default to Claude if no hybrid indicators
+            return '<span onclick="filterByProvider(\'claude\')" style="background:#007bff;color:white;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer;" title="Click to filter by Claude AI">🤖 Claude</span>';
+        }
+        
+        window.filterByProvider = function(provider) {
+            console.log('Filtering by provider:', provider);
+            document.getElementById('providerFilter').value = provider;
+            applyFilters();
+        };
+
+        function updatePagination() {
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
+        }
+
+        function updateStats() {
+            document.getElementById('gridStats').textContent = 
+                `Showing ${filteredData.length} of ${allData.length} organizations`;
+        }
+
+        window.previousPage = function() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderTable();
+            }
+        };
+
+        window.nextPage = function() {
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderTable();
+            }
+        };
+
+        // Sorting
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const column = th.dataset.column;
+                
+                if (sortColumn === column) {
+                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortColumn = column;
+                    sortDirection = 'asc';
+                }
+                
+                sortData();
+                updateSortIndicators();
+                renderTable();
+            });
+        });
+
+        function sortData() {
+            filteredData.sort((a, b) => {
+                let aVal, bVal;
+                
+                switch(sortColumn) {
+                    case 'organization':
+                        aVal = a.OrganizationName;
+                        bVal = b.OrganizationName;
+                        break;
+                    case 'sentiment':
+                        aVal = a.AverageSentiment;
+                        bVal = b.AverageSentiment;
+                        break;
+                    case 'risk':
+                        const riskOrder = { 'High': 3, 'Medium': 2, 'Low': 1, 'Unknown': 0 };
+                        aVal = riskOrder[a.RiskLevel] || 0;
+                        bVal = riskOrder[b.RiskLevel] || 0;
+                        break;
+                    case 'comments':
+                        aVal = a.TotalComments || 0;
+                        bVal = b.TotalComments || 0;
+                        break;
+                    case 'challenges':
+                        aVal = a.ChallengeCount || 0;
+                        bVal = b.ChallengeCount || 0;
+                        break;
+                }
+                
+                if (typeof aVal === 'string') {
+                    return sortDirection === 'asc' 
+                        ? aVal.localeCompare(bVal)
+                        : bVal.localeCompare(aVal);
+                } else {
+                    return sortDirection === 'asc' 
+                        ? aVal - bVal
+                        : bVal - aVal;
+                }
+            });
+        }
+
+        function updateSortIndicators() {
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (th.dataset.column === sortColumn) {
+                    th.classList.add(`sort-${sortDirection}`);
+                }
+            });
+        }
+
+        window.viewDetails = function(index) {
+            console.log('View details clicked for index:', index);
+            const org = filteredData[index];
+            console.log('Organization data:', org);
+            
+            try {
+                const modal = document.getElementById('detailsModal');
+                const modalBody = document.getElementById('modalBody');
+                
+                if (!modal) {
+                    console.error('Modal element not found!');
+                    return;
+                }
+                if (!modalBody) {
+                    console.error('Modal body element not found!');
+                    return;
+                }
+                
+                console.log('Building modal HTML...');
+                
+                // Handle both AI-enhanced and hybrid data structures
+                const sentiment = org.AverageSentiment ?? org.ClaudeSentiment ?? 0;
+                const riskLevel = org.RiskLevel ?? org.ClaudeRiskLevel ?? 'Unknown';
+                const totalComments = org.TotalComments ?? 0;
+                const challengeCount = org.ChallengeCount ?? (org.ClaudeDetailedChallenges?.length || 0);
+                const isHybrid = org.ClaudeSentiment !== undefined || org.SemanticCoherence !== undefined;
+                
+                // Build comprehensive modal HTML
+                let modalHTML = `
+                <h2>${org.OrganizationName || 'Organization'}</h2>
+                <div style="margin-bottom:20px;">${getProviderBadge(org)}</div>
+                
+                <div class="detail-section">
+                    <h3>📊 Overview</h3>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+                        <div>
+                            <p><strong>Sentiment Score:</strong> ${sentiment.toFixed(2)} ${isHybrid ? '<span style="color:#007bff;font-size:11px;">(Claude AI)</span>' : ''}</p>
+                            <p><strong>Risk Level:</strong> <span class="risk-badge risk-${riskLevel.toLowerCase()}">${riskLevel}</span> ${isHybrid ? '<span style="color:#007bff;font-size:11px;">(Claude AI)</span>' : ''}</p>
+                            ${org.IntegratedRiskAssessment ? `<p><strong>Integrated Risk:</strong> <span style="background:#9b59b6;color:white;padding:3px 8px;border-radius:4px;font-size:11px;">🔀 ${org.IntegratedRiskAssessment}</span></p>` : ''}
+                        </div>
+                        <div>
+                            <p><strong>Total Comments:</strong> ${totalComments}</p>
+                            <p><strong>Challenge Count:</strong> ${challengeCount}</p>
+                        </div>
+                    </div>
+                    ${org.ClaudeTopChallenges && org.ClaudeTopChallenges.length > 0 ? `
+                    <div style="margin-top:15px;padding-top:15px;border-top:1px solid #e0e0e0;">
+                        <p style="margin-bottom:8px;"><strong>🎯 Top Challenges Summary:</strong></p>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                            ${org.ClaudeTopChallenges.map(ch => `<span style="background:#007bff;color:white;padding:5px 10px;border-radius:12px;font-size:11px;">${ch}</span>`).join('')}
+                        </div>
+                    </div>` : ''}
+                </div>`;
+                
+                // Semantic Analysis Section (if available)
+                if (org.SemanticCoherence !== undefined || org.SemanticKeywords) {
+                    modalHTML += `
+                    <div class="detail-section" style="background:#f0fff4;border-left:4px solid #28a745;padding:20px;">
+                        <h3>🧠 Semantic Analysis <span style="color:#28a745;font-size:14px;font-weight:bold;">(Sentence Transformers)</span></h3>
+                        <div style="margin-top:15px;">
+                            ${org.SemanticCoherence !== undefined ? `
+                            <div style="margin-bottom:15px;">
+                                <p style="font-size:16px;"><strong>Coherence Score:</strong> <span style="color:#28a745;font-size:18px;font-weight:bold;">${org.SemanticCoherence.toFixed(2)}</span></p>
+                                <p style="font-size:13px;color:#666;margin-top:5px;">Measures how consistent and related the comments are (0-1 scale, higher is more coherent)</p>
+                            </div>` : ''}
+                            
+                            ${org.SemanticThemeName ? `
+                            <div style="margin-bottom:15px;">
+                                <p><strong>Identified Theme:</strong> <span style="background:#d4edda;padding:4px 10px;border-radius:4px;font-weight:500;">${org.SemanticThemeName}</span></p>
+                            </div>` : ''}
+                            
+                            ${org.SemanticKeywords && org.SemanticKeywords.length > 0 ? `
+                            <div style="margin-bottom:15px;">
+                                <p><strong>Extracted Keywords:</strong></p>
+                                <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;">
+                                    ${org.SemanticKeywords.map(kw => `<span style="background:#28a745;color:white;padding:5px 12px;border-radius:15px;font-size:12px;">${kw}</span>`).join('')}
+                                </div>
+                            </div>` : ''}
+                            
+                            ${org.SemanticSimilarComments && org.SemanticSimilarComments.length > 0 ? `
+                            <div style="margin-top:15px;">
+                                <p><strong>Similar Comment Patterns:</strong></p>
+                                <ul style="margin-top:8px;padding-left:20px;">
+                                    ${org.SemanticSimilarComments.slice(0, 5).map(comment => `<li style="margin-bottom:5px;color:#555;">${comment}</li>`).join('')}
+                                </ul>
+                            </div>` : ''}
+                        </div>
+                    </div>`;
+                }
+                
+                // Claude AI Context Section
+                if (org.ClaudeContextualBackground || org.ContextualBackground) {
+                    const context = org.ClaudeContextualBackground || org.ContextualBackground;
+                    modalHTML += `
+                    <div class="detail-section" style="background:#f0f8ff;border-left:4px solid #007bff;padding:20px;">
+                        <h3>📝 Contextual Background <span style="color:#007bff;font-size:14px;font-weight:bold;">(Claude AI)</span></h3>
+                        <p style="line-height:1.6;color:#333;margin-top:10px;">${context}</p>
+                    </div>`;
+                }
+                
+                // Claude AI Detailed Challenges Section
+                if (org.ClaudeDetailedChallenges && org.ClaudeDetailedChallenges.length > 0) {
+                    modalHTML += `
+                    <div class="detail-section" style="background:#f0f8ff;border-left:4px solid #007bff;padding:20px;">
+                        <h3>⚠️ Detailed Challenges <span style="color:#007bff;font-size:14px;font-weight:bold;">(Claude AI)</span></h3>
+                        <p style="font-size:13px;color:#666;margin-bottom:15px;">Comprehensive challenge analysis with actionable remediation strategies</p>
+                        ${org.ClaudeDetailedChallenges.map((challenge, idx) => `
+                            <div class="challenge-card" style="background:white;padding:20px;margin-bottom:20px;border-radius:8px;border:1px solid #e0e0e0;box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                                <h4 style="color:#007bff;margin-bottom:15px;font-size:17px;font-weight:600;">${idx + 1}. ${challenge.Challenge}</h4>
+                                
+                                ${challenge.Description ? `
+                                <div style="margin-bottom:15px;background:#f8f9fa;padding:12px;border-radius:6px;">
+                                    <p style="margin:0 0 5px 0;"><strong style="color:#495057;">📝 Description:</strong></p>
+                                    <p style="margin:0;color:#333;line-height:1.6;">${challenge.Description}</p>
+                                </div>` : ''}
+                                
+                                ${challenge.Impact ? `
+                                <div style="margin-bottom:15px;background:#fff3cd;padding:12px;border-radius:6px;border-left:4px solid #ffc107;">
+                                    <p style="margin:0 0 5px 0;"><strong style="color:#856404;">⚡ Impact:</strong></p>
+                                    <p style="margin:0;color:#856404;line-height:1.6;">${challenge.Impact}</p>
+                                </div>` : ''}
+                                
+                                ${challenge.SuggestedRemedy ? `
+                                <div style="margin-bottom:15px;background:#d4edda;padding:12px;border-radius:6px;border-left:4px solid #28a745;">
+                                    <p style="margin:0 0 5px 0;"><strong style="color:#155724;">💡 Suggested Remedy:</strong></p>
+                                    <p style="margin:0;color:#155724;line-height:1.6;">${challenge.SuggestedRemedy}</p>
+                                </div>` : ''}
+                                
+                                ${challenge.ActionSteps && challenge.ActionSteps.length > 0 ? `
+                                <div style="margin-bottom:15px;">
+                                    <p style="margin:0 0 10px 0;"><strong style="color:#495057;">✅ Action Steps:</strong></p>
+                                    <ol style="margin:0;padding-left:25px;color:#333;">
+                                        ${challenge.ActionSteps.map(step => `<li style="margin-bottom:8px;line-height:1.5;">${step}</li>`).join('')}
+                                    </ol>
+                                </div>` : ''}
+                                
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:15px;padding-top:15px;border-top:1px solid #e0e0e0;">
+                                    ${challenge.Timeline ? `
+                                    <div>
+                                        <p style="margin:0;"><strong style="color:#495057;">⏱️ Timeline:</strong></p>
+                                        <p style="margin:5px 0 0 0;"><span style="background:#007bff;color:white;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:500;">${challenge.Timeline}</span></p>
+                                    </div>` : ''}
+                                    
+                                    ${challenge.ResponsibleParty ? `
+                                    <div>
+                                        <p style="margin:0;"><strong style="color:#495057;">👤 Responsible Party:</strong></p>
+                                        <p style="margin:5px 0 0 0;color:#333;font-size:13px;">${challenge.ResponsibleParty}</p>
+                                    </div>` : ''}
+                                </div>
+                                
+                                ${challenge.Evidence ? `
+                                <div style="margin-top:15px;padding-top:15px;border-top:1px solid #e0e0e0;background:#f8f9fa;padding:15px;border-radius:6px;">
+                                    <p style="margin:0 0 10px 0;"><strong style="color:#495057;">📋 Evidence from Excel Data:</strong></p>
+                                    <div style="background:white;padding:12px;border-radius:4px;border-left:4px solid #007bff;">
+                                        <p style="margin:0;color:#333;font-style:italic;line-height:1.7;font-size:14px;">"${challenge.Evidence}"</p>
+                                    </div>
+                                    <p style="margin:10px 0 0 0;font-size:12px;color:#6c757d;">
+                                        <em>↑ This is the exact comment from the Excel file that Claude AI analyzed to identify this challenge</em>
+                                    </p>
+                                </div>` : ''}
+                                
+                                ${challenge.HowAddressedHistorically ? `
+                                <div style="margin-top:15px;padding-top:15px;border-top:1px solid #e0e0e0;">
+                                    <p style="margin:0 0 8px 0;"><strong style="color:#495057;">📚 Historical Context:</strong></p>
+                                    <p style="margin:0;padding-left:12px;border-left:3px solid #6c757d;color:#555;line-height:1.6;">${challenge.HowAddressedHistorically}</p>
+                                </div>` : ''}
+                                
+                                ${challenge.FutureRemedy ? `
+                                <div style="margin-top:15px;padding-top:15px;border-top:1px solid #e0e0e0;">
+                                    <p style="margin:0 0 8px 0;"><strong style="color:#495057;">🔮 Future Remedy:</strong></p>
+                                    <p style="margin:0;padding-left:12px;border-left:3px solid #28a745;color:#155724;line-height:1.6;">${challenge.FutureRemedy}</p>
+                                </div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>`;
+                } else if (org.DetailedChallenges && org.DetailedChallenges.length > 0) {
+                    modalHTML += `
+                    <div class="detail-section" style="background:#f0f8ff;border-left:4px solid #007bff;padding:20px;">
+                        <h3>⚠️ Detailed Challenges <span style="color:#007bff;font-size:14px;font-weight:bold;">(Claude AI)</span></h3>
+                        <p style="font-size:13px;color:#666;margin-bottom:15px;">Comprehensive challenge analysis with actionable remediation strategies</p>
+                        ${org.DetailedChallenges.map((challenge, idx) => `
+                            <div class="challenge-card" style="background:white;padding:20px;margin-bottom:20px;border-radius:8px;border:1px solid #e0e0e0;box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                                <h4 style="color:#007bff;margin-bottom:15px;font-size:17px;font-weight:600;">${idx + 1}. ${challenge.Challenge}</h4>
+                                
+                                ${challenge.Description ? `
+                                <div style="margin-bottom:15px;background:#f8f9fa;padding:12px;border-radius:6px;">
+                                    <p style="margin:0 0 5px 0;"><strong style="color:#495057;">📝 Description:</strong></p>
+                                    <p style="margin:0;color:#333;line-height:1.6;">${challenge.Description}</p>
+                                </div>` : ''}
+                                
+                                ${challenge.Impact ? `
+                                <div style="margin-bottom:15px;background:#fff3cd;padding:12px;border-radius:6px;border-left:4px solid #ffc107;">
+                                    <p style="margin:0 0 5px 0;"><strong style="color:#856404;">⚡ Impact:</strong></p>
+                                    <p style="margin:0;color:#856404;line-height:1.6;">${challenge.Impact}</p>
+                                </div>` : ''}
+                                
+                                ${challenge.SuggestedRemedy ? `
+                                <div style="margin-bottom:15px;background:#d4edda;padding:12px;border-radius:6px;border-left:4px solid #28a745;">
+                                    <p style="margin:0 0 5px 0;"><strong style="color:#155724;">💡 Suggested Remedy:</strong></p>
+                                    <p style="margin:0;color:#155724;line-height:1.6;">${challenge.SuggestedRemedy}</p>
+                                </div>` : ''}
+                                
+                                ${challenge.ActionSteps && challenge.ActionSteps.length > 0 ? `
+                                <div style="margin-bottom:15px;">
+                                    <p style="margin:0 0 10px 0;"><strong style="color:#495057;">✅ Action Steps:</strong></p>
+                                    <ol style="margin:0;padding-left:25px;color:#333;">
+                                        ${challenge.ActionSteps.map(step => `<li style="margin-bottom:8px;line-height:1.5;">${step}</li>`).join('')}
+                                    </ol>
+                                </div>` : ''}
+                                
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:15px;padding-top:15px;border-top:1px solid #e0e0e0;">
+                                    ${challenge.Timeline ? `
+                                    <div>
+                                        <p style="margin:0;"><strong style="color:#495057;">⏱️ Timeline:</strong></p>
+                                        <p style="margin:5px 0 0 0;"><span style="background:#007bff;color:white;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:500;">${challenge.Timeline}</span></p>
+                                    </div>` : ''}
+                                    
+                                    ${challenge.ResponsibleParty ? `
+                                    <div>
+                                        <p style="margin:0;"><strong style="color:#495057;">👤 Responsible Party:</strong></p>
+                                        <p style="margin:5px 0 0 0;color:#333;font-size:13px;">${challenge.ResponsibleParty}</p>
+                                    </div>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>`;
+                }
+                
+                // Claude AI Recommendations Section
+                if (org.ClaudeRecommendations && org.ClaudeRecommendations.length > 0) {
+                    modalHTML += `
+                    <div class="detail-section" style="background:#f0f8ff;border-left:4px solid #007bff;padding:20px;">
+                        <h3>💡 Recommendations <span style="color:#007bff;font-size:14px;font-weight:bold;">(Claude AI)</span></h3>
+                        <p style="font-size:13px;color:#666;margin-bottom:15px;">Strategic recommendations for improvement</p>
+                        <ul class="detail-list" style="list-style:none;padding:0;">
+                            ${org.ClaudeRecommendations.map((rec, idx) => `
+                                <li style="background:white;padding:12px;margin-bottom:10px;border-radius:6px;border-left:4px solid #007bff;">
+                                    <strong style="color:#007bff;">${idx + 1}.</strong> ${rec}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>`;
+                } else if (org.SpecificRecommendations && org.SpecificRecommendations.length > 0) {
+                    modalHTML += `
+                    <div class="detail-section" style="background:#f0f8ff;border-left:4px solid #007bff;padding:20px;">
+                        <h3>💡 Recommendations <span style="color:#007bff;font-size:14px;font-weight:bold;">(Claude AI)</span></h3>
+                        <ul class="detail-list" style="list-style:none;padding:0;">
+                            ${org.SpecificRecommendations.map((rec, idx) => `
+                                <li style="background:white;padding:12px;margin-bottom:10px;border-radius:6px;border-left:4px solid #007bff;">
+                                    <strong style="color:#007bff;">${idx + 1}.</strong> ${rec}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>`;
+                }
+                
+                // Positive Aspects Section
+                if (org.PositiveAspects && org.PositiveAspects.length > 0) {
+                    modalHTML += `
+                    <div class="detail-section" style="background:#f0fff4;border-left:4px solid #28a745;padding:20px;">
+                        <h3>✅ Positive Aspects</h3>
+                        <ul class="detail-list" style="list-style:none;padding:0;">
+                            ${org.PositiveAspects.map(aspect => `
+                                <li style="background:white;padding:10px;margin-bottom:8px;border-radius:6px;border-left:3px solid #28a745;">
+                                    ✓ ${aspect}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>`;
+                }
+                
+                // Reviewer Notes Section
+                if (org.ReviewerNotes) {
+                    modalHTML += `
+                    <div class="detail-section" style="background:#fff8e1;border-left:4px solid #ffc107;padding:20px;">
+                        <h3>📋 Reviewer Notes</h3>
+                        <p style="line-height:1.6;color:#333;margin-top:10px;">${org.ReviewerNotes}</p>
+                    </div>`;
+                }
+                
+                // Action Needed Section
+                if (org.ActionNeeded) {
+                    modalHTML += `
+                    <div class="detail-section" style="background:#fff3f3;border-left:4px solid #dc3545;padding:20px;">
+                        <h3>🎯 Action Needed</h3>
+                        <p style="line-height:1.6;color:#333;margin-top:10px;font-weight:500;">${org.ActionNeeded}</p>
+                    </div>`;
+                }
+                
+                // Semantic Theme with Representative Comment (for hybrid analysis)
+                if (isHybrid && org.SemanticThemeName) {
+                    modalHTML += `
+                    <div class="detail-section" style="background:#f8f9fa;border-left:4px solid #6c757d;padding:20px;">
+                        <h3>🔍 Semantic Theme Analysis <span style="color:#6c757d;font-size:14px;font-weight:bold;">(Sentence Transformer)</span></h3>
+                        <p style="font-size:13px;color:#666;margin-bottom:15px;">Pattern recognition from comment clustering</p>
+                        <div style="background:white;padding:15px;border-radius:6px;margin-bottom:15px;">
+                            <p style="margin:0 0 8px 0;"><strong style="color:#495057;">Theme:</strong> <span style="background:#6c757d;color:white;padding:4px 10px;border-radius:12px;font-size:13px;">${org.SemanticThemeName}</span></p>
+                            ${org.SemanticKeywords && org.SemanticKeywords.length > 0 ? `
+                            <p style="margin:10px 0 8px 0;"><strong style="color:#495057;">Keywords:</strong></p>
+                            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                                ${org.SemanticKeywords.map(kw => `<span style="background:#e9ecef;color:#495057;padding:4px 8px;border-radius:8px;font-size:12px;">${kw}</span>`).join('')}
+                            </div>` : ''}
+                        </div>
+                    </div>`;
+                }
+                
+                // Set the modal body HTML
+                modalBody.innerHTML = modalHTML;
+            
+                console.log('Modal HTML built successfully');
+                modal.classList.add('active');
+                console.log('Modal active class added. Modal display:', window.getComputedStyle(modal).display);
+                console.log('Modal element:', modal);
+            } catch (error) {
+                console.error('Error in viewDetails:', error);
+                alert('Error displaying details: ' + error.message);
+            }
+        };
+
+        window.closeModal = function() {
+            document.getElementById('detailsModal').classList.remove('active');
+        };
+
+        window.exportToCSV = function() {
+            const headers = ['Organization', 'Sentiment', 'Risk Level', 'Comments', 'Challenge Count', 'Top Challenges', 'Action Needed'];
+            const rows = filteredData.map(org => [
+                org.OrganizationName,
+                org.AverageSentiment.toFixed(2),
+                org.RiskLevel || 'Unknown',
+                org.TotalComments || 0,
+                org.ChallengeCount || 0,
+                (org.TopChallenges || []).join('; '),
+                org.ActionNeeded || ''
+            ]);
+            
+            const csv = [
+                headers.join(','),
+                ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+            ].join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `analysis-report-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+    </script>
+</body>
+</html>

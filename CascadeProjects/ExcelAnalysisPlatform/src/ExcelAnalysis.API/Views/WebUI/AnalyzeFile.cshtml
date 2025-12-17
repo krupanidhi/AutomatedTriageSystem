@@ -1,0 +1,177 @@
+@model ExcelFileInfo
+@{
+    ViewData["Title"] = "Analyze File";
+}
+
+<div class="analyze-container">
+    <div class="page-header">
+        <h1><i class="fas fa-chart-line"></i> Analyze File</h1>
+        <p class="subtitle">@Model.FileName</p>
+    </div>
+
+    <div class="analysis-options">
+        <div class="option-card" onclick="runAnalysis(@Model.Id, 'realistic')">
+            <div class="option-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <i class="fas fa-keyboard"></i>
+            </div>
+            <div class="option-content">
+                <h3>Keyword-Based Analysis</h3>
+                <p>Fast, comprehensive sentiment analysis using dynamically extracted buzzwords with organization insights, thematic challenges, and detailed recommendations</p>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check"></i> Organization-level sentiment ranking</li>
+                    <li><i class="fas fa-check"></i> Thematic challenge grouping</li>
+                    <li><i class="fas fa-check"></i> Actionable recommendations</li>
+                    <li><i class="fas fa-check"></i> Fast processing (~0.2s)</li>
+                    <li><i class="fas fa-check"></i> No API costs</li>
+                </ul>
+                <div class="option-meta">
+                    <span class="badge badge-success">Fast</span>
+                    <span class="badge badge-info">Free</span>
+                </div>
+            </div>
+            <button class="btn btn-primary">
+                <i class="fas fa-play"></i> Run Analysis
+            </button>
+        </div>
+
+        <div class="option-card" onclick="runAnalysis(@Model.Id, 'comparison')">
+            <div class="option-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <i class="fas fa-balance-scale"></i>
+            </div>
+            <div class="option-content">
+                <h3>Comparison Analysis</h3>
+                <p>Side-by-side comparison of keyword-based vs AI-based sentiment analysis with detailed metrics and insights</p>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check"></i> Keyword vs Claude AI comparison</li>
+                    <li><i class="fas fa-check"></i> Organization-level differences</li>
+                    <li><i class="fas fa-check"></i> Speed and cost metrics</li>
+                    <li><i class="fas fa-check"></i> Agreement level analysis</li>
+                    <li><i class="fas fa-check"></i> Method recommendations</li>
+                </ul>
+                <div class="option-meta">
+                    <span class="badge badge-warning">3-5 min</span>
+                    <span class="badge badge-danger">~$0.05</span>
+                </div>
+            </div>
+            <button class="btn btn-primary">
+                <i class="fas fa-play"></i> Run Analysis
+            </button>
+        </div>
+
+        <div class="option-card" onclick="runAnalysis(@Model.Id, 'basic')">
+            <div class="option-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="option-content">
+                <h3>AI-Powered Analysis</h3>
+                <p>Advanced AI-driven sentiment analysis with nuanced emotional understanding, risk classification, and mitigation strategies</p>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check"></i> Claude AI sentiment analysis</li>
+                    <li><i class="fas fa-check"></i> Nuanced emotional context detection</li>
+                    <li><i class="fas fa-check"></i> Risk classification (High/Medium/Low)</li>
+                    <li><i class="fas fa-check"></i> Mitigation strategies</li>
+                    <li><i class="fas fa-check"></i> Executive summary</li>
+                </ul>
+                <div class="option-meta">
+                    <span class="badge badge-warning">2-3 min</span>
+                    <span class="badge badge-danger">~$0.01</span>
+                </div>
+            </div>
+            <button class="btn btn-primary">
+                <i class="fas fa-play"></i> Run Analysis
+            </button>
+        </div>
+    </div>
+
+    <div id="analysisProgress" class="analysis-progress" style="display: none;">
+        <div class="progress-content">
+            <div class="spinner"></div>
+            <h3 id="progressTitle">Running Analysis...</h3>
+            <p id="progressMessage">Please wait while we analyze your data</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function runAnalysis(fileId, type) {
+            const progressDiv = document.getElementById('analysisProgress');
+            const progressTitle = document.getElementById('progressTitle');
+            const progressMessage = document.getElementById('progressMessage');
+            const progressFill = document.getElementById('progressFill');
+
+            progressDiv.style.display = 'flex';
+            progressFill.style.width = '10%';
+
+            let endpoint = '';
+            let estimatedTime = 0;
+
+            switch(type) {
+                case 'realistic':
+                    endpoint = `/api/Analysis/${fileId}/analyze-realistic`;
+                    progressTitle.textContent = 'Running Keyword-Based Analysis...';
+                    progressMessage.textContent = 'Analyzing with dynamically extracted buzzwords';
+                    estimatedTime = 500;
+                    break;
+                case 'comparison':
+                    endpoint = `/api/Analysis/${fileId}/analyze-comparison`;
+                    progressTitle.textContent = 'Running Comparison Analysis...';
+                    progressMessage.textContent = 'Comparing keyword-based vs AI-based methods (3-5 minutes)';
+                    estimatedTime = 180000;
+                    break;
+                case 'basic':
+                    endpoint = `/api/Analysis/${fileId}/analyze`;
+                    progressTitle.textContent = 'Running AI-Powered Analysis...';
+                    progressMessage.textContent = 'Analyzing with Claude AI for nuanced sentiment detection';
+                    estimatedTime = 120000;
+                    break;
+            }
+
+            // Simulate progress
+            let progress = 10;
+            const progressInterval = setInterval(() => {
+                progress += (90 - progress) * 0.1;
+                progressFill.style.width = progress + '%';
+            }, 1000);
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                clearInterval(progressInterval);
+                progressFill.style.width = '100%';
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    progressTitle.textContent = 'Analysis Complete!';
+                    progressMessage.textContent = 'Preparing report...';
+                    
+                    // Store the analysis data in sessionStorage
+                    sessionStorage.setItem(`analysis_${fileId}_${type}`, JSON.stringify(data));
+                    
+                    setTimeout(() => {
+                        window.location.href = `/report/${fileId}/${type}`;
+                    }, 500);
+                } else {
+                    const error = await response.text();
+                    progressTitle.textContent = 'Analysis Failed';
+                    progressMessage.textContent = error;
+                    progressFill.style.backgroundColor = '#dc3545';
+                }
+            } catch (error) {
+                clearInterval(progressInterval);
+                progressTitle.textContent = 'Error';
+                progressMessage.textContent = error.message;
+                progressFill.style.backgroundColor = '#dc3545';
+            }
+        }
+    </script>
+}

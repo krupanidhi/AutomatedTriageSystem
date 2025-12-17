@@ -1,0 +1,1252 @@
+@model ExcelFileInfo
+@{
+    ViewData["Title"] = "Analysis Report";
+    var reportType = ViewBag.ReportType;
+    var fileId = ViewBag.FileId;
+}
+
+<div class="report-container">
+    <div class="report-header">
+        <div class="report-title">
+            <h1><i class="fas fa-file-chart-line"></i> Analysis Report</h1>
+            <p class="subtitle">@Model.FileName</p>
+        </div>
+        <div class="report-actions">
+            <button onclick="printReport()" class="btn btn-secondary">
+                <i class="fas fa-print"></i> Print
+            </button>
+            <button onclick="downloadReport()" class="btn btn-secondary">
+                <i class="fas fa-download"></i> Download PDF
+            </button>
+            <a href="/dashboard" class="btn btn-primary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div id="reportLoading" class="loading-state">
+        <div class="spinner-large"></div>
+        <h3>Loading Report...</h3>
+        <p>Please wait while we generate your analysis report</p>
+    </div>
+
+    <div id="reportContent" style="display: none;">
+        <!-- Report will be dynamically loaded here -->
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const fileId = @fileId;
+        const reportType = '@reportType';
+
+        async function loadReport() {
+            const loadingDiv = document.getElementById('reportLoading');
+            const contentDiv = document.getElementById('reportContent');
+
+            try {
+                let data = null;
+                
+                // First, try to get data from sessionStorage (just completed analysis)
+                const storageKey = `analysis_${fileId}_${reportType}`;
+                const cachedData = sessionStorage.getItem(storageKey);
+                
+                if (cachedData) {
+                    console.log('Loading report from sessionStorage');
+                    data = JSON.parse(cachedData);
+                    // Clear the cache after loading
+                    sessionStorage.removeItem(storageKey);
+                } else {
+                    // If not in cache, fetch from API (re-run analysis)
+                    console.log('Fetching report from API');
+                    let endpoint = '';
+                    
+                    switch(reportType) {
+                        case 'realistic':
+                            endpoint = `/api/Reports/${fileId}/realistic-data`;
+                            break;
+                        case 'comparison':
+                            endpoint = `/api/Reports/${fileId}/comparison-data`;
+                            break;
+                        case 'basic':
+                            endpoint = `/api/Analysis/${fileId}/results`;
+                            break;
+                    }
+
+                    const response = await fetch(endpoint);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`Failed to load report data: ${errorText}`);
+                    }
+
+                    data = await response.json();
+                }
+                
+                loadingDiv.style.display = 'none';
+                contentDiv.style.display = 'block';
+                
+                renderReport(data, reportType);
+                
+            } catch (error) {
+                console.error('Report loading error:', error);
+                loadingDiv.innerHTML = `
+                    <div class="error-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Error Loading Report</h3>
+                        <p>${error.message}</p>
+                        <button onclick="window.location.href='/analyze/${fileId}'" class="btn btn-secondary" style="margin-right: 10px;">
+                            <i class="fas fa-redo"></i> Run Analysis Again
+                        </button>
+                        <a href="/dashboard" class="btn btn-primary">Back to Dashboard</a>
+                    </div>
+                `;
+            }
+        }
+
+        function renderReport(data, type) {
+            const contentDiv = document.getElementById('reportContent');
+            
+            console.log('Rendering report type:', type);
+            console.log('Report data:', data);
+            
+            try {
+                if (type === 'comparison') {
+                    contentDiv.innerHTML = renderComparisonReport(data);
+                } else if (type === 'realistic') {
+                    contentDiv.innerHTML = renderRealisticReport(data);
+                } else {
+                    contentDiv.innerHTML = renderBasicReport(data);
+                }
+                
+                // Add download button
+                addDownloadButton(data, type);
+            } catch (error) {
+                console.error('Error rendering report:', error);
+                contentDiv.innerHTML = `
+                    <div class="error-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Error Rendering Report</h3>
+                        <p>${error.message}</p>
+                        <details>
+                            <summary>Debug Info</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    </div>
+                `;
+            }
+        }
+        
+        function addDownloadButton(data, type) {
+            const contentDiv = document.getElementById('reportContent');
+            const downloadBtn = document.createElement('div');
+            downloadBtn.className = 'download-section';
+            downloadBtn.innerHTML = `
+                <button onclick="downloadJSON()" class="btn btn-secondary">
+                    <i class="fas fa-download"></i> Download Report as JSON
+                </button>
+            `;
+            contentDiv.insertBefore(downloadBtn, contentDiv.firstChild);
+            
+            // Store data for download
+            window.reportData = data;
+            window.reportType = type;
+        }
+        
+        function downloadJSON() {
+            const data = window.reportData;
+            const type = window.reportType;
+            const filename = `analysis_${fileId}_${type}_${new Date().toISOString().split('T')[0]}.json`;
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function renderComparisonReport(data) {
+            const keyword = data.keywordMethodology;
+            const ai = data.aiMethodology;
+            const diff = Math.abs(keyword.averageSentiment - ai.averageSentiment);
+
+            return `
+                <div class="report-section">
+                    <h2><i class="fas fa-info-circle"></i> Overview</h2>
+                    <div class="metadata-grid">
+                        <div class="metadata-card">
+                            <div class="label">File Name</div>
+                            <div class="value">${data.fileName}</div>
+                        </div>
+                        <div class="metadata-card">
+                            <div class="label">Analysis Date</div>
+                            <div class="value">${new Date(data.analyzedAt).toLocaleDateString()}</div>
+                        </div>
+                        <div class="metadata-card">
+                            <div class="label">Organizations</div>
+                            <div class="value">${data.totalOrganizations}</div>
+                        </div>
+                        <div class="metadata-card">
+                            <div class="label">Comments</div>
+                            <div class="value">${data.totalComments}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <h2><i class="fas fa-balance-scale"></i> Method Comparison</h2>
+                    <div class="comparison-grid">
+                        <div class="method-card keyword-card">
+                            <h3><i class="fas fa-keyboard"></i> Keyword-Based Analysis</h3>
+                            <div class="metrics">
+                                <div class="metric">
+                                    <span class="metric-label">Processing Time</span>
+                                    <span class="metric-value">${keyword.processingTimeSeconds.toFixed(2)}s</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">API Calls</span>
+                                    <span class="metric-value">${keyword.apiCallsUsed}</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Cost</span>
+                                    <span class="metric-value">$${keyword.estimatedCost.toFixed(4)}</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Avg Sentiment</span>
+                                    <span class="metric-value">${keyword.averageSentiment.toFixed(3)}</span>
+                                </div>
+                            </div>
+                            <div class="sentiment-distribution">
+                                <div class="sentiment-bar">
+                                    <div class="positive" style="width: ${(keyword.positiveCount / (keyword.positiveCount + keyword.neutralCount + keyword.negativeCount) * 100).toFixed(1)}%">
+                                        ${(keyword.positiveCount / (keyword.positiveCount + keyword.neutralCount + keyword.negativeCount) * 100).toFixed(1)}%
+                                    </div>
+                                    <div class="neutral" style="width: ${(keyword.neutralCount / (keyword.positiveCount + keyword.neutralCount + keyword.negativeCount) * 100).toFixed(1)}%">
+                                        ${(keyword.neutralCount / (keyword.positiveCount + keyword.neutralCount + keyword.negativeCount) * 100).toFixed(1)}%
+                                    </div>
+                                    <div class="negative" style="width: ${(keyword.negativeCount / (keyword.positiveCount + keyword.neutralCount + keyword.negativeCount) * 100).toFixed(1)}%">
+                                        ${(keyword.negativeCount / (keyword.positiveCount + keyword.neutralCount + keyword.negativeCount) * 100).toFixed(1)}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="method-card ai-card">
+                            <h3><i class="fas fa-robot"></i> AI-Based Analysis</h3>
+                            <div class="metrics">
+                                <div class="metric">
+                                    <span class="metric-label">Processing Time</span>
+                                    <span class="metric-value">${ai.processingTimeSeconds.toFixed(2)}s</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">API Calls</span>
+                                    <span class="metric-value">${ai.apiCallsUsed}</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Cost</span>
+                                    <span class="metric-value">$${ai.estimatedCost.toFixed(4)}</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Avg Sentiment</span>
+                                    <span class="metric-value">${ai.averageSentiment.toFixed(3)}</span>
+                                </div>
+                            </div>
+                            <div class="sentiment-distribution">
+                                <div class="sentiment-bar">
+                                    <div class="positive" style="width: ${(ai.positiveCount / (ai.positiveCount + ai.neutralCount + ai.negativeCount) * 100).toFixed(1)}%">
+                                        ${(ai.positiveCount / (ai.positiveCount + ai.neutralCount + ai.negativeCount) * 100).toFixed(1)}%
+                                    </div>
+                                    <div class="neutral" style="width: ${(ai.neutralCount / (ai.positiveCount + ai.neutralCount + ai.negativeCount) * 100).toFixed(1)}%">
+                                        ${(ai.neutralCount / (ai.positiveCount + ai.neutralCount + ai.negativeCount) * 100).toFixed(1)}%
+                                    </div>
+                                    <div class="negative" style="width: ${(ai.negativeCount / (ai.positiveCount + ai.neutralCount + ai.negativeCount) * 100).toFixed(1)}%">
+                                        ${(ai.negativeCount / (ai.positiveCount + ai.neutralCount + ai.negativeCount) * 100).toFixed(1)}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <h2><i class="fas fa-lightbulb"></i> Key Insights</h2>
+                    <div class="insights-grid">
+                        ${data.keyFindings.map(finding => `
+                            <div class="insight-card">
+                                <i class="fas fa-check-circle"></i>
+                                <p>${finding}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <h2><i class="fas fa-building"></i> Organizations Comparison</h2>
+                    ${renderOrganizationsComparison(data.organizationComparisons)}
+                </div>
+
+                <div class="report-section">
+                    <h2><i class="fas fa-clipboard-check"></i> Recommendation</h2>
+                    <div class="recommendation-box">
+                        <p>${data.recommendedApproach}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderRealisticReport(data) {
+            return `
+                <div class="report-section">
+                    <h2><i class="fas fa-info-circle"></i> Overview</h2>
+                    <div class="metadata-grid">
+                        <div class="metadata-card">
+                            <div class="label">File Name</div>
+                            <div class="value">${data.fileName}</div>
+                        </div>
+                        <div class="metadata-card">
+                            <div class="label">Organizations</div>
+                            <div class="value">${data.totalGranteesAnalyzed}</div>
+                        </div>
+                        <div class="metadata-card">
+                            <div class="label">Responses</div>
+                            <div class="value">${data.totalResponsesAnalyzed}</div>
+                        </div>
+                        <div class="metadata-card">
+                            <div class="label">Avg Sentiment</div>
+                            <div class="value">${data.overallAverageSentiment.toFixed(3)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <h2><i class="fas fa-chart-pie"></i> Sentiment Distribution</h2>
+                    <div class="sentiment-bar-large">
+                        <div class="positive" style="width: ${data.sentimentDistribution.positivePercentage.toFixed(1)}%">
+                            Positive: ${data.sentimentDistribution.positivePercentage.toFixed(1)}%
+                        </div>
+                        <div class="neutral" style="width: ${data.sentimentDistribution.neutralPercentage.toFixed(1)}%">
+                            Neutral: ${data.sentimentDistribution.neutralPercentage.toFixed(1)}%
+                        </div>
+                        <div class="negative" style="width: ${data.sentimentDistribution.negativePercentage.toFixed(1)}%">
+                            Negative: ${data.sentimentDistribution.negativePercentage.toFixed(1)}%
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <h2><i class="fas fa-exclamation-triangle"></i> Organizations Requiring Attention</h2>
+                    ${renderOrganizations(data.lowestSentimentOrganizations)}
+                </div>
+
+                <div class="report-section">
+                    <h2><i class="fas fa-chart-bar"></i> Top Challenges</h2>
+                    ${renderChallenges(data.topChallenges)}
+                </div>
+
+                <div class="report-section">
+                    <h2><i class="fas fa-tasks"></i> Recommendations</h2>
+                    ${renderRecommendations(data.immediateActions, data.mediumTermStrategies, data.longTermConsiderations)}
+                </div>
+
+                <div class="report-section">
+                    <h2><i class="fas fa-file-alt"></i> Executive Summary</h2>
+                    <div class="summary-box">
+                        ${data.executiveSummary.replace(/\n/g, '<br><br>')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderOrganizationsComparison(orgs) {
+            if (!orgs || orgs.length === 0) return '<p>No comparison data available</p>';
+            
+            return `
+                <div class="orgs-table">
+                    ${orgs.map(org => `
+                        <div class="org-row">
+                            <div class="org-name">${org.organization}</div>
+                            <div class="org-scores">
+                                <div class="score-item">
+                                    <span class="label">Keyword:</span>
+                                    <span class="value">${org.keywordSentiment.toFixed(3)}</span>
+                                </div>
+                                <div class="score-item">
+                                    <span class="label">AI:</span>
+                                    <span class="value">${org.aiSentiment.toFixed(3)}</span>
+                                </div>
+                                <div class="score-item">
+                                    <span class="label">Diff:</span>
+                                    <span class="value">${org.difference.toFixed(3)}</span>
+                                </div>
+                            </div>
+                            <div class="org-analysis">${org.analysis}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderOrganizations(orgs) {
+            return `
+                <div class="orgs-grid">
+                    ${orgs.slice(0, 10).map((org, index) => `
+                        <div class="org-card org-card-detailed">
+                            <div class="org-header-section">
+                                <div class="org-rank">#${index + 1}</div>
+                                <span class="risk-badge risk-${org.riskLevel?.toLowerCase() || 'medium'}">${org.riskLevel || 'Medium'} Risk</span>
+                            </div>
+                            <h4>${org.organizationName}</h4>
+                            
+                            ${org.contextualBackground ? `
+                            <div class="org-context">
+                                <i class="fas fa-info-circle"></i> ${org.contextualBackground}
+                            </div>
+                            ` : ''}
+                            
+                            <div class="org-metrics">
+                                <div class="metric-item">
+                                    <span class="label">Sentiment</span>
+                                    <span class="value sentiment-${org.averageSentiment < 0.4 ? 'low' : org.averageSentiment < 0.6 ? 'medium' : 'high'}">
+                                        ${org.averageSentiment.toFixed(3)}
+                                    </span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="label">Comments</span>
+                                    <span class="value">${org.totalComments}</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="label">Challenges</span>
+                                    <span class="value">${org.challengeCount}</span>
+                                </div>
+                            </div>
+                            
+                            ${org.positiveAspects && org.positiveAspects.length > 0 ? `
+                            <div class="positive-aspects">
+                                <strong><i class="fas fa-check-circle"></i> Strengths:</strong>
+                                <ul>
+                                    ${org.positiveAspects.map(p => `<li>${p}</li>`).join('')}
+                                </ul>
+                            </div>
+                            ` : ''}
+                            
+                            ${org.detailedChallenges && org.detailedChallenges.length > 0 ? `
+                            <div class="detailed-challenges-section">
+                                <h5><i class="fas fa-exclamation-triangle"></i> Detailed Challenges & Remedies</h5>
+                                ${org.detailedChallenges.map(challenge => `
+                                    <div class="challenge-remedy-card">
+                                        <div class="challenge-title">
+                                            <strong>${challenge.challenge}</strong>
+                                            <span class="timeline-badge">${challenge.timeline}</span>
+                                        </div>
+                                        <p class="challenge-desc">${challenge.description}</p>
+                                        <div class="impact-section">
+                                            <strong>Impact:</strong> ${challenge.impact}
+                                        </div>
+                                        <div class="remedy-section">
+                                            <strong><i class="fas fa-lightbulb"></i> Suggested Remedy:</strong>
+                                            <p>${challenge.suggestedRemedy}</p>
+                                        </div>
+                                        <div class="action-steps-section">
+                                            <strong>Action Steps:</strong>
+                                            <ol>
+                                                ${challenge.actionSteps.map(step => `<li>${step}</li>`).join('')}
+                                            </ol>
+                                        </div>
+                                        <div class="responsible-party">
+                                            <i class="fas fa-user-tie"></i> <strong>Responsible:</strong> ${challenge.responsibleParty}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ` : ''}
+                            
+                            ${org.specificRecommendations && org.specificRecommendations.length > 0 ? `
+                            <div class="specific-recommendations">
+                                <strong><i class="fas fa-tasks"></i> Specific Recommendations:</strong>
+                                <ul>
+                                    ${org.specificRecommendations.map(rec => `<li>${rec}</li>`).join('')}
+                                </ul>
+                            </div>
+                            ` : ''}
+                            
+                            ${org.reviewerNotes ? `
+                            <div class="reviewer-notes">
+                                <i class="fas fa-clipboard"></i> <strong>Reviewer Notes:</strong> ${org.reviewerNotes}
+                            </div>
+                            ` : ''}
+                            
+                            <div class="action-needed ${org.averageSentiment < 0.4 ? 'urgent' : ''}">${org.actionNeeded}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderChallenges(challenges) {
+            return `
+                <div class="challenges-list">
+                    ${challenges.slice(0, 10).map((challenge, index) => `
+                        <div class="challenge-item">
+                            <div class="challenge-header">
+                                <span class="rank">#${index + 1}</span>
+                                <h4>${challenge.challengeName}</h4>
+                                <span class="count">${challenge.count} mentions</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderRecommendations(immediate, medium, longTerm) {
+            let html = '<div class="recommendations-container">';
+            
+            if (immediate && immediate.length > 0) {
+                html += '<h3 class="rec-category"><i class="fas fa-fire"></i> Immediate Actions</h3>';
+                html += immediate.map(rec => `
+                    <div class="rec-card priority-high">
+                        <div class="rec-header">
+                            <span class="priority-badge high">${rec.priority}</span>
+                            <h4>${rec.title}</h4>
+                        </div>
+                        <p>${rec.description}</p>
+                        <ul class="action-steps">
+                            ${rec.actionSteps.map(step => `<li>${step}</li>`).join('')}
+                        </ul>
+                    </div>
+                `).join('');
+            }
+            
+            if (medium && medium.length > 0) {
+                html += '<h3 class="rec-category"><i class="fas fa-calendar-alt"></i> Medium-Term Strategies</h3>';
+                html += medium.map(rec => `
+                    <div class="rec-card priority-medium">
+                        <div class="rec-header">
+                            <span class="priority-badge medium">${rec.priority}</span>
+                            <h4>${rec.title}</h4>
+                        </div>
+                        <p>${rec.description}</p>
+                        <ul class="action-steps">
+                            ${rec.actionSteps.map(step => `<li>${step}</li>`).join('')}
+                        </ul>
+                    </div>
+                `).join('');
+            }
+            
+            if (longTerm && longTerm.length > 0) {
+                html += '<h3 class="rec-category"><i class="fas fa-road"></i> Long-Term Considerations</h3>';
+                html += longTerm.map(rec => `
+                    <div class="rec-card priority-low">
+                        <div class="rec-header">
+                            <span class="priority-badge low">${rec.priority}</span>
+                            <h4>${rec.title}</h4>
+                        </div>
+                        <p>${rec.description}</p>
+                        <ul class="action-steps">
+                            ${rec.actionSteps.map(step => `<li>${step}</li>`).join('')}
+                        </ul>
+                    </div>
+                `).join('');
+            }
+            
+            html += '</div>';
+            return html;
+        }
+
+        function renderBasicReport(data) {
+            return `
+                <div class="report-section">
+                    <h2><i class="fas fa-info-circle"></i> Analysis Overview</h2>
+                    <div class="metadata-grid">
+                        <div class="metadata-card">
+                            <div class="label">Analysis Date</div>
+                            <div class="value">${new Date(data.analyzedAt).toLocaleDateString()}</div>
+                        </div>
+                        <div class="metadata-card">
+                            <div class="label">Completion</div>
+                            <div class="value">${data.completionPercentage?.toFixed(0) || 0}%</div>
+                        </div>
+                        <div class="metadata-card">
+                            <div class="label">Sentiment Score</div>
+                            <div class="value">${data.overallSentimentScore?.toFixed(3) || 'N/A'}</div>
+                        </div>
+                        <div class="metadata-card">
+                            <div class="label">Total Deliverables</div>
+                            <div class="value">${data.totalDeliverables || 0}</div>
+                        </div>
+                    </div>
+                </div>
+
+                ${data.completionPercentage ? `
+                <div class="report-section">
+                    <h2><i class="fas fa-tasks"></i> Progress Breakdown</h2>
+                    <div class="metadata-grid">
+                        <div class="metadata-card">
+                            <div class="label">Completed</div>
+                            <div class="value" style="color: #28a745;">${data.completedDeliverables || 0}</div>
+                        </div>
+                        <div class="metadata-card">
+                            <div class="label">In Progress</div>
+                            <div class="value" style="color: #ffc107;">${data.inProgressDeliverables || 0}</div>
+                        </div>
+                        <div class="metadata-card">
+                            <div class="label">Not Started</div>
+                            <div class="value" style="color: #dc3545;">${data.notStartedDeliverables || 0}</div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+
+                ${data.highRiskCount || data.mediumRiskCount || data.lowRiskCount ? `
+                <div class="report-section">
+                    <h2><i class="fas fa-exclamation-triangle"></i> Risk Assessment</h2>
+                    <div class="metadata-grid">
+                        <div class="metadata-card">
+                            <div class="label">High Risk</div>
+                            <div class="value" style="color: #dc3545;">${data.highRiskCount || 0}</div>
+                        </div>
+                        <div class="metadata-card">
+                            <div class="label">Medium Risk</div>
+                            <div class="value" style="color: #ffc107;">${data.mediumRiskCount || 0}</div>
+                        </div>
+                        <div class="metadata-card">
+                            <div class="label">Low Risk</div>
+                            <div class="value" style="color: #28a745;">${data.lowRiskCount || 0}</div>
+                        </div>
+                    </div>
+                    ${data.riskSummary ? `
+                    <div class="summary-box" style="margin-top: 20px;">
+                        <strong>Risk Summary:</strong><br>
+                        ${data.riskSummary}
+                    </div>
+                    ` : ''}
+                </div>
+                ` : ''}
+
+                ${data.executiveSummary ? `
+                <div class="report-section">
+                    <h2><i class="fas fa-file-alt"></i> Executive Summary</h2>
+                    <div class="summary-box">
+                        ${data.executiveSummary.replace(/\n/g, '<br><br>')}
+                    </div>
+                </div>
+                ` : ''}
+
+                ${data.sentimentSummary ? `
+                <div class="report-section">
+                    <h2><i class="fas fa-chart-line"></i> Sentiment Analysis</h2>
+                    <div class="summary-box">
+                        ${data.sentimentSummary.replace(/\n/g, '<br><br>')}
+                    </div>
+                </div>
+                ` : ''}
+
+                ${data.identifiedIssues && data.identifiedIssues.length > 0 ? `
+                <div class="report-section">
+                    <h2><i class="fas fa-exclamation-circle"></i> Identified Issues</h2>
+                    <ul class="action-steps">
+                        ${data.identifiedIssues.map(issue => `<li>${issue}</li>`).join('')}
+                    </ul>
+                </div>
+                ` : ''}
+
+                ${data.blockers && data.blockers.length > 0 ? `
+                <div class="report-section">
+                    <h2><i class="fas fa-ban"></i> Blockers</h2>
+                    <ul class="action-steps">
+                        ${data.blockers.map(blocker => `<li>${blocker}</li>`).join('')}
+                    </ul>
+                </div>
+                ` : ''}
+
+                ${data.recommendations && data.recommendations.length > 0 ? `
+                <div class="report-section">
+                    <h2><i class="fas fa-lightbulb"></i> Recommendations</h2>
+                    <ul class="action-steps">
+                        ${data.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                    </ul>
+                </div>
+                ` : ''}
+            `;
+        }
+
+        function printReport() {
+            window.print();
+        }
+
+        function downloadReport() {
+            alert('PDF download feature coming soon!');
+        }
+
+        // Load report on page load
+        window.addEventListener('DOMContentLoaded', loadReport);
+    </script>
+}
+
+<style>
+    .download-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    .download-section .btn {
+        background: white;
+        color: #667eea;
+        font-weight: 600;
+        padding: 12px 30px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .download-section .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .error-state details {
+        margin-top: 20px;
+        text-align: left;
+    }
+
+    .error-state summary {
+        cursor: pointer;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        margin-bottom: 10px;
+    }
+
+    .error-state pre {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 6px;
+        overflow-x: auto;
+        font-size: 0.85em;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .report-section {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+
+    .report-section h2 {
+        color: var(--primary-color);
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.5em;
+    }
+
+    .metadata-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .metadata-card {
+        background: var(--light-gray);
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .metadata-card .label {
+        font-size: 0.9em;
+        color: var(--dark-gray);
+        margin-bottom: 8px;
+    }
+
+    .metadata-card .value {
+        font-size: 1.5em;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
+    .sentiment-bar-large {
+        display: flex;
+        height: 60px;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .sentiment-bar-large > div {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+
+    .sentiment-bar-large .positive {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    }
+
+    .sentiment-bar-large .neutral {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .sentiment-bar-large .negative {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+
+    .orgs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+    }
+
+    .org-card {
+        background: white;
+        border: 2px solid var(--light-gray);
+        border-radius: 10px;
+        padding: 20px;
+        transition: all 0.3s;
+    }
+
+    .org-card:hover {
+        border-color: var(--primary-color);
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .org-rank {
+        display: inline-block;
+        background: var(--primary-color);
+        color: white;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+    }
+
+    .org-card h4 {
+        color: var(--text-color);
+        margin: 10px 0;
+        font-size: 1.1em;
+    }
+
+    .org-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin: 15px 0;
+    }
+
+    .metric-item {
+        text-align: center;
+    }
+
+    .metric-item .label {
+        font-size: 0.8em;
+        color: var(--dark-gray);
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    .metric-item .value {
+        font-weight: 700;
+        font-size: 1.1em;
+        color: var(--primary-color);
+    }
+
+    .sentiment-low {
+        color: #dc3545 !important;
+    }
+
+    .sentiment-medium {
+        color: #ffc107 !important;
+    }
+
+    .sentiment-high {
+        color: #28a745 !important;
+    }
+
+    .challenges-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 15px 0;
+    }
+
+    .tag {
+        background: var(--light-gray);
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.85em;
+        color: var(--text-color);
+    }
+
+    .action-needed {
+        margin-top: 15px;
+        padding: 12px;
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        border-radius: 4px;
+        font-size: 0.9em;
+        color: #856404;
+    }
+
+    .action-needed.urgent {
+        background: #f8d7da;
+        border-left-color: #dc3545;
+        color: #721c24;
+        font-weight: 600;
+    }
+
+    .org-card-detailed {
+        max-width: 100%;
+    }
+
+    .org-header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .risk-badge {
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.85em;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .risk-badge.risk-high {
+        background: #dc3545;
+        color: white;
+    }
+
+    .risk-badge.risk-medium {
+        background: #ffc107;
+        color: #856404;
+    }
+
+    .risk-badge.risk-low {
+        background: #28a745;
+        color: white;
+    }
+
+    .org-context {
+        background: #e7f3ff;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 15px 0;
+        font-size: 0.9em;
+        line-height: 1.6;
+    }
+
+    .positive-aspects {
+        background: #d4edda;
+        padding: 15px;
+        border-radius: 6px;
+        margin: 15px 0;
+    }
+
+    .positive-aspects ul {
+        margin: 10px 0 0 0;
+        padding-left: 20px;
+    }
+
+    .positive-aspects li {
+        margin: 5px 0;
+    }
+
+    .detailed-challenges-section {
+        margin: 20px 0;
+    }
+
+    .detailed-challenges-section h5 {
+        color: var(--primary-color);
+        margin-bottom: 15px;
+        font-size: 1.1em;
+    }
+
+    .challenge-remedy-card {
+        background: #f8f9fa;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+    }
+
+    .challenge-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .challenge-title strong {
+        color: #dc3545;
+        font-size: 1.05em;
+    }
+
+    .timeline-badge {
+        background: var(--primary-color);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.8em;
+        font-weight: 600;
+    }
+
+    .challenge-desc {
+        margin: 12px 0;
+        color: var(--text-color);
+        line-height: 1.6;
+    }
+
+    .impact-section {
+        background: #fff3cd;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 12px 0;
+        border-left: 4px solid #ffc107;
+    }
+
+    .remedy-section {
+        background: #d1ecf1;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 12px 0;
+        border-left: 4px solid #17a2b8;
+    }
+
+    .remedy-section p {
+        margin: 8px 0 0 0;
+        line-height: 1.6;
+    }
+
+    .action-steps-section {
+        margin: 15px 0;
+    }
+
+    .action-steps-section ol {
+        margin: 10px 0;
+        padding-left: 25px;
+    }
+
+    .action-steps-section li {
+        margin: 8px 0;
+        line-height: 1.6;
+    }
+
+    .responsible-party {
+        background: #e2e3e5;
+        padding: 10px;
+        border-radius: 6px;
+        margin-top: 12px;
+        font-size: 0.9em;
+    }
+
+    .specific-recommendations {
+        background: #d4edda;
+        padding: 15px;
+        border-radius: 6px;
+        margin: 15px 0;
+        border-left: 4px solid #28a745;
+    }
+
+    .specific-recommendations ul {
+        margin: 10px 0 0 0;
+        padding-left: 20px;
+    }
+
+    .specific-recommendations li {
+        margin: 8px 0;
+        line-height: 1.6;
+    }
+
+    .reviewer-notes {
+        background: #f8f9fa;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 15px 0;
+        font-size: 0.9em;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .orgs-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+
+    .challenges-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .challenge-item {
+        background: white;
+        border: 1px solid var(--light-gray);
+        border-radius: 8px;
+        padding: 15px;
+        transition: all 0.3s;
+    }
+
+    .challenge-item:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .challenge-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .challenge-header .rank {
+        background: var(--primary-color);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-weight: 600;
+        font-size: 0.9em;
+    }
+
+    .challenge-header h4 {
+        flex: 1;
+        margin: 0;
+        color: var(--text-color);
+    }
+
+    .challenge-header .count {
+        color: var(--dark-gray);
+        font-size: 0.9em;
+    }
+
+    .summary-box {
+        background: var(--light-gray);
+        padding: 25px;
+        border-radius: 8px;
+        line-height: 1.8;
+        color: var(--text-color);
+    }
+
+    .recommendations-container {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+    }
+
+    .rec-category {
+        color: var(--primary-color);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    .rec-card {
+        background: white;
+        border: 2px solid var(--light-gray);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+    }
+
+    .rec-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .priority-badge {
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.85em;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .priority-badge.high {
+        background: #dc3545;
+        color: white;
+    }
+
+    .priority-badge.medium {
+        background: #ffc107;
+        color: #856404;
+    }
+
+    .priority-badge.low {
+        background: #17a2b8;
+        color: white;
+    }
+
+    .rec-card h4 {
+        flex: 1;
+        margin: 0;
+        color: var(--text-color);
+    }
+
+    .rec-card p {
+        color: var(--dark-gray);
+        line-height: 1.6;
+        margin-bottom: 15px;
+    }
+
+    .action-steps {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .action-steps li {
+        padding: 10px 15px;
+        background: var(--light-gray);
+        border-radius: 6px;
+        margin-bottom: 8px;
+        position: relative;
+        padding-left: 35px;
+    }
+
+    .action-steps li:before {
+        content: "✓";
+        position: absolute;
+        left: 12px;
+        color: var(--primary-color);
+        font-weight: 700;
+    }
+
+    @@media print {
+        .report-header,
+        .download-section,
+        .btn {
+            display: none !important;
+        }
+
+        .report-section {
+            page-break-inside: avoid;
+            box-shadow: none;
+        }
+    }
+</style>

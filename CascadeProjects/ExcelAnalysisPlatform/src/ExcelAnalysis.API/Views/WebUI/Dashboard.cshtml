@@ -1,0 +1,330 @@
+@model IEnumerable<ExcelFileInfo>
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<style>
+    .dropdown-divider {
+        height: 0;
+        margin: 0.5rem 0;
+        overflow: hidden;
+        border-top: 1px solid #e9ecef;
+    }
+</style>
+
+<div class="dashboard-container">
+    <div class="page-header">
+        <h1><i class="fas fa-chart-line"></i> Analysis Dashboard</h1>
+        <p class="subtitle">Manage and analyze your Excel files with AI-powered insights</p>
+    </div>
+
+    <div class="stats-overview">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <i class="fas fa-file-excel"></i>
+            </div>
+            <div class="stat-info">
+                <h3>@Model.Count()</h3>
+                <p>Total Files</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <div class="stat-info">
+                <h3>@Model.Count(f => f.UploadedAt > DateTime.UtcNow.AddDays(-7))</h3>
+                <p>This Week</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="stat-info">
+                <h3>3</h3>
+                <p>Analysis Types</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Ready</h3>
+                <p>System Status</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-buttons">
+        <a href="/upload" class="btn btn-primary">
+            <i class="fas fa-upload"></i> Upload New File
+        </a>
+        <a href="/report-grid" class="btn btn-secondary">
+            <i class="fas fa-table"></i> View Report Grid
+        </a>
+    </div>
+
+    <div class="files-section">
+        <h2><i class="fas fa-folder-open"></i> Your Files</h2>
+        
+        @if (!Model.Any())
+        {
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <h3>No files uploaded yet</h3>
+                <p>Upload an Excel file to get started with AI-powered analysis</p>
+                <a href="/upload" class="btn btn-primary">Upload Your First File</a>
+            </div>
+        }
+        else
+        {
+            <div class="files-grid">
+                @foreach (var file in Model.OrderByDescending(f => f.UploadedAt))
+                {
+                    <div class="file-card">
+                        <div class="file-icon">
+                            <i class="fas fa-file-excel"></i>
+                        </div>
+                        <div class="file-info">
+                            <h3>@file.FileName</h3>
+                            <p class="file-meta">
+                                <i class="fas fa-calendar"></i> @file.UploadedAt.ToString("MMM dd, yyyy")
+                                <span class="separator">•</span>
+                                <i class="fas fa-hdd"></i> @((file.FileSizeBytes / 1024.0).ToString("F1")) KB
+                            </p>
+                        </div>
+                        <div class="file-actions">
+                            <a href="/analyze/@file.Id" class="btn btn-sm btn-primary">
+                                <i class="fas fa-chart-line"></i> Analyze
+                            </a>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-secondary dropdown-toggle">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <div class="dropdown-menu">
+                                    <a href="#" onclick="runKeywordAnalysis(@file.Id); return false;" class="dropdown-item">
+                                        <i class="fas fa-search"></i> Keyword Analysis
+                                    </a>
+                                    <a href="#" onclick="runAIAnalysis(@file.Id); return false;" class="dropdown-item">
+                                        <i class="fas fa-robot"></i> AI-Enhanced Analysis
+                                    </a>
+                                    <a href="#" onclick="runHybridAnalysis(@file.Id); return false;" class="dropdown-item">
+                                        <i class="fas fa-layer-group"></i> Hybrid Analysis (Claude + Semantic)
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                    <a href="/report/@file.Id/realistic" class="dropdown-item">
+                                        <i class="fas fa-file-alt"></i> View Realistic Report
+                                    </a>
+                                    <a href="/report/@file.Id/comparison" class="dropdown-item">
+                                        <i class="fas fa-balance-scale"></i> View Comparison Report
+                                    </a>
+                                    <a href="#" onclick="viewHistoricalComparison(@file.Id); return false;" class="dropdown-item">
+                                        <i class="fas fa-chart-line"></i> Historical Trends
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                    <a href="/api/Reports/@file.Id/download-keyword-json" class="dropdown-item">
+                                        <i class="fas fa-download"></i> Download Keyword Report
+                                    </a>
+                                    <a href="/api/Reports/@file.Id/download-ai-json" class="dropdown-item">
+                                        <i class="fas fa-download"></i> Download AI Report (Claude)
+                                    </a>
+                                    <a href="/api/Reports/@file.Id/download-semantic-json" class="dropdown-item">
+                                        <i class="fas fa-download"></i> Download Semantic Report
+                                    </a>
+                                    <a href="/api/Reports/@file.Id/download-hybrid-json" class="dropdown-item">
+                                        <i class="fas fa-download"></i> Download Hybrid Report
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                    <a href="/api/files/@file.Id/download" class="dropdown-item">
+                                        <i class="fas fa-file-excel"></i> Download Excel File
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Simple dropdown toggle
+        document.querySelectorAll('.dropdown-toggle').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const menu = this.nextElementSibling;
+                menu.classList.toggle('show');
+            });
+        });
+
+        document.addEventListener('click', function() {
+            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        });
+
+        // Run Keyword-Based Analysis
+        async function runKeywordAnalysis(fileId) {
+            if (!confirm('Run keyword-based analysis? This will take about 30 seconds.')) {
+                return;
+            }
+
+            const btn = event.target.closest('.dropdown-item');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+            btn.style.pointerEvents = 'none';
+
+            try {
+                const response = await fetch(`/api/Analysis/${fileId}/analyze-realistic`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    alert('✅ Keyword analysis complete! You can now view or download the report.');
+                    location.reload();
+                } else {
+                    const error = await response.text();
+                    alert('❌ Analysis failed: ' + error);
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.style.pointerEvents = 'auto';
+            }
+        }
+
+        // Run AI-Enhanced Analysis
+        async function runAIAnalysis(fileId) {
+            if (!confirm('Run AI-enhanced analysis using Claude? This will take 2-5 minutes and uses AI credits.')) {
+                return;
+            }
+
+            const btn = event.target.closest('.dropdown-item');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI Analyzing...';
+            btn.style.pointerEvents = 'none';
+
+            try {
+                const response = await fetch(`/api/Analysis/${fileId}/analyze-ai-enhanced`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    alert('✅ AI-enhanced analysis complete! You can now view or download the report.');
+                    location.reload();
+                } else {
+                    const error = await response.text();
+                    alert('❌ AI analysis failed: ' + error);
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.style.pointerEvents = 'auto';
+            }
+        }
+
+        // Run Hybrid Analysis (Claude + Semantic)
+        async function runHybridAnalysis(fileId) {
+            if (!confirm('Run hybrid analysis combining Claude AI and Sentence Transformers?\n\nThis will:\n• Run Claude AI analysis (detailed insights)\n• Run Semantic analysis (theme clustering)\n• Integrate results from both models\n\nTime: 2-5 minutes | Cost: Claude API credits only')) {
+                return;
+            }
+
+            const btn = event.target.closest('.dropdown-item');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Hybrid Analyzing...';
+            btn.style.pointerEvents = 'none';
+
+            try {
+                const response = await fetch(`/api/Analysis/${fileId}/analyze-hybrid`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const claudeStatus = result.claudeResults ? '✅ Claude' : '⚠️ Claude unavailable';
+                    const semanticStatus = result.semanticResults ? '✅ Semantic' : '⚠️ Semantic unavailable';
+                    
+                    alert(`✅ Hybrid analysis complete!\n\n${claudeStatus}\n${semanticStatus}\n\nYou can now download:\n• Claude-only report\n• Semantic-only report\n• Hybrid integrated report`);
+                    location.reload();
+                } else {
+                    const error = await response.text();
+                    alert('❌ Hybrid analysis failed: ' + error);
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.style.pointerEvents = 'auto';
+            }
+        }
+
+        // View Historical Comparison
+        async function viewHistoricalComparison(fileId) {
+            try {
+                const response = await fetch(`/api/HistoricalAnalysis/${fileId}/comparative`);
+                const data = await response.json();
+
+                if (data.message) {
+                    alert('ℹ️ ' + data.message);
+                    return;
+                }
+
+                // Open in new window with formatted data
+                const win = window.open('', '_blank');
+                win.document.write('<html><head><title>Historical Trends - File ' + fileId + '</title>');
+                win.document.write('<style>body{font-family:Arial;padding:20px;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ddd;padding:8px;text-align:left;} th{background:#667eea;color:white;} .improving{color:green;} .worsening{color:red;} .stable{color:gray;}</style>');
+                win.document.write('</head><body>');
+                win.document.write('<h1>📊 Historical Trends & Comparative Analysis</h1>');
+                
+                data.forEach(org => {
+                    win.document.write(`<h2>${org.organizationName}</h2>`);
+                    win.document.write('<table>');
+                    win.document.write('<tr><th>Metric</th><th>Previous</th><th>Current</th><th>Change</th></tr>');
+                    win.document.write(`<tr><td>Sentiment</td><td>${org.previousSentiment.toFixed(2)}</td><td>${org.currentSentiment.toFixed(2)}</td><td class="${org.sentimentTrend.toLowerCase()}">${org.sentimentChange > 0 ? '+' : ''}${org.sentimentChange.toFixed(2)} (${org.sentimentTrend})</td></tr>`);
+                    win.document.write(`<tr><td>Risk Level</td><td>${org.previousRiskLevel}</td><td>${org.currentRiskLevel}</td><td class="${org.riskTrend.toLowerCase()}">${org.riskTrend}</td></tr>`);
+                    win.document.write('</table>');
+                    
+                    if (org.newChallenges.length > 0) {
+                        win.document.write('<h3>🆕 New Challenges</h3><ul>');
+                        org.newChallenges.forEach(c => win.document.write(`<li>${c}</li>`));
+                        win.document.write('</ul>');
+                    }
+                    
+                    if (org.resolvedChallenges.length > 0) {
+                        win.document.write('<h3>✅ Resolved Challenges</h3><ul>');
+                        org.resolvedChallenges.forEach(c => win.document.write(`<li>${c}</li>`));
+                        win.document.write('</ul>');
+                    }
+                    
+                    if (org.persistentChallenges.length > 0) {
+                        win.document.write('<h3>🔄 Persistent Challenges</h3><ul>');
+                        org.persistentChallenges.forEach(c => win.document.write(`<li>${c}</li>`));
+                        win.document.write('</ul>');
+                    }
+                    
+                    if (org.recommendations.length > 0) {
+                        win.document.write('<h3>💡 Recommendations</h3><ul>');
+                        org.recommendations.forEach(r => win.document.write(`<li>${r}</li>`));
+                        win.document.write('</ul>');
+                    }
+                    
+                    win.document.write('<hr>');
+                });
+                
+                win.document.write('</body></html>');
+                win.document.close();
+            } catch (error) {
+                alert('❌ Error loading historical data: ' + error.message);
+            }
+        }
+    </script>
+}
